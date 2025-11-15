@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { API_BASE_URL } from "@/lib/api"
 import { useAppStore } from "@/lib/store"
 import { ResponsivePageHeader } from "@/components/responsive-page-header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -64,7 +65,7 @@ export default function ApprovalsPage() {
 
   const fetchPendingWorkers = async () => {
     try {
-      const response = await fetch("http://localhost:8000/api/workers?status=pending")
+      const response = await fetch(`${API_BASE_URL}/workers?status=pending`)
       if (!response.ok) {
         throw new Error("Failed to fetch pending workers")
       }
@@ -85,7 +86,7 @@ export default function ApprovalsPage() {
     const toastId = toast.loading("Approving worker...")
     
     try {
-      const response = await fetch("http://localhost:8000/api/workers/approve", {
+      const response = await fetch(`${API_BASE_URL}/workers/approve`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -130,7 +131,7 @@ export default function ApprovalsPage() {
     const toastId = toast.loading("Rejecting worker...")
     
     try {
-      const response = await fetch("http://localhost:8000/api/workers/approve", {
+      const response = await fetch(`${API_BASE_URL}/workers/approve`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

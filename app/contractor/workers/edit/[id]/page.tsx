@@ -5,7 +5,7 @@ import { useState, useEffect } from "react"
 import { Upload, X, Image as ImageIcon, ArrowLeft } from "lucide-react"
 import { useRouter, useParams } from "next/navigation"
 import { useAppStore } from "@/lib/store"
-import { updateWorker } from "@/lib/api"
+import { updateWorker, API_BASE_URL } from "@/lib/api"
 import { toast } from "sonner"
 import Link from "next/link"
 
@@ -135,7 +135,7 @@ export default function EditWorkerPage() {
   useEffect(() => {
     async function fetchWorkerData() {
       try {
-        const response = await fetch(`http://localhost:8000/api/workers/${workerId}`)
+        const response = await fetch(`${API_BASE_URL}/workers/${workerId}`)
         if (!response.ok) {
           throw new Error("Failed to fetch worker data")
         }

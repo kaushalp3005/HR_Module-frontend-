@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { ResponsivePageHeader } from "@/components/responsive-page-header"
+import { API_BASE_URL } from "@/lib/api"
 import { ResponsiveTable } from "@/components/responsive-table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -36,7 +37,7 @@ export default function WorkersPage() {
 
   const fetchApprovedWorkers = async () => {
     try {
-      const response = await fetch("http://localhost:8000/api/workers?status=approved")
+      const response = await fetch(`${API_BASE_URL}/workers?status=approved`)
       if (!response.ok) {
         throw new Error("Failed to fetch approved workers")
       }
@@ -70,7 +71,7 @@ export default function WorkersPage() {
     const toastId = toast.loading("Deleting worker...")
     
     try {
-      const response = await fetch(`http://localhost:8000/api/workers/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/workers/${id}`, {
         method: "DELETE",
       })
 

@@ -1,5 +1,6 @@
 // API Configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+// Default to deployed API Gateway URL; can be overridden via NEXT_PUBLIC_API_URL
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://ztuoww4gvd.execute-api.ap-south-1.amazonaws.com/prod/api';
 
 export interface AddWorkerPayload {
   // Basic Information

@@ -9,6 +9,7 @@ import { LogOut, Menu, X } from "lucide-react"
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
+import { API_BASE_URL } from "@/lib/api"
 
 const navItems = [
   { href: "/hr", label: "Dashboard", showBadge: false },
@@ -35,7 +36,7 @@ export default function HRLayout({
   // Fetch pending approvals count
   const fetchPendingApprovalsCount = async () => {
     try {
-      const response = await fetch("http://localhost:8000/api/workers?status=pending")
+      const response = await fetch(`${API_BASE_URL}/workers?status=pending`)
       if (response.ok) {
         const data = await response.json()
         setPendingApprovalsCount(data.length)
