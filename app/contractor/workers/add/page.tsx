@@ -7,7 +7,7 @@ import { useState, useEffect } from "react"
 import { Upload, X, Image as ImageIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useAppStore } from "@/lib/store"
-import { addWorker, getNextEmpNo } from "@/lib/api"
+import { addWorker, getNextEmpId } from "@/lib/api"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -43,6 +43,7 @@ const workerFormSchema = z.object({
   gender: z.string().min(1, "Gender is required"),
   dateOfJoining: z.string().min(1, "Joining date is required"),
   designation: z.string().min(1, "Designation is required"),
+  designationOther: z.string().optional(),
   department: z.string().min(1, "Department is required"),
   departmentOther: z.string().optional(),
   workLocation: z.string().min(1, "Work location is required"),
@@ -58,6 +59,9 @@ const workerFormSchema = z.object({
     .min(10, "Emergency contact must be 10 digits")
     .max(10, "Emergency contact must be 10 digits")
     .regex(/^[0-9]+$/, "Emergency contact must contain only digits"),
+  emrcyPNm: z.string().optional(),
+  resp: z.string().optional(),
+  emrcyConNo: z.string().optional(),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
   uanNumber: z.string().min(1, "UAN number is required"),
   esiNumber: z.string().min(1, "ESI number is required"),
@@ -69,12 +73,19 @@ const workerFormSchema = z.object({
     .min(10, "PAN must be 10 characters")
     .max(10, "PAN must be 10 characters")
     .regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "Invalid PAN format (e.g., ABCDE1234F)"),
-  address: z.string().min(10, "Address must be at least 10 characters"),
   currentlyStayingType: z.enum(["permanent", "rental"]).refine(val => val, {
     message: "Please select staying type"
   }),
   permanentAddress: z.string().optional(),
   rentalAddress: z.string().optional(),
+  pinCode: z.string().optional(),
+  bankName: z.string().optional(),
+  bankAc: z.string().optional(),
+  ifscCode: z.string().optional(),
+  aprnSize: z.string().optional(),
+  ftwrSize: z.string().optional(),
+  mdcl: z.string().optional(),
+  remark: z.string().optional(),
   passportPhoto: z.any().refine(val => val !== null, "Passport photo is required"),
   aadharCard: z.any().refine(val => val !== null, "Aadhaar card photo is required"),
   panCard: z.any().refine(val => val !== null, "PAN card photo is required"),
@@ -89,6 +100,7 @@ const defaultValues: Partial<AddWorkerFormValues> = {
   gender: "",
   dateOfJoining: "",
   designation: "",
+  designationOther: "",
   department: "",
   departmentOther: "",
   workLocation: "",
@@ -103,10 +115,20 @@ const defaultValues: Partial<AddWorkerFormValues> = {
   esiNumber: "",
   aadharNumber: "",
   panNumber: "",
-  address: "",
   currentlyStayingType: undefined,
   permanentAddress: "",
   rentalAddress: "",
+  pinCode: "",
+  bankName: "",
+  bankAc: "",
+  ifscCode: "",
+  aprnSize: "",
+  ftwrSize: "",
+  mdcl: "",
+  remark: "",
+  emrcyPNm: "",
+  resp: "",
+  emrcyConNo: "",
   passportPhoto: null,
   aadharCard: null,
   panCard: null,
@@ -114,7 +136,7 @@ const defaultValues: Partial<AddWorkerFormValues> = {
 
 const titleOptions = ["MR", "MRS", "MS", "DR"]
 const genderOptions = ["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"]
-const designationOptions = ["LINE WORKER", "SUPERVISOR", "TEAM LEADER", "MACHINE OPERATOR", "TECHNICIAN"]
+const designationOptions = ["LINE WORKER", "SUPERVISOR", "TEAM LEADER", "MACHINE OPERATOR", "TECHNICIAN", "PRINTING", "OTHER"]
 const departmentOptions = ["Production", "Seasoning", "Service Floor", "Printing", "CHOCOLATE", "OTHER"]
 const locationOptions = ["A-68-Mahape", "A-101-Koparkhairne", "W-202-Koparkhairne", "A-185-Koparkhairne", "F-53-APMC", "OTHER"]
 const floorOptions = [
@@ -136,7 +158,7 @@ export default function AddWorkerPage() {
   const router = useRouter()
   const user = useAppStore((state) => state.user)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [nextEmpNo, setNextEmpNo] = useState<string>("")
+  const [nextEmpId, setNextEmpId] = useState<string>("")
   
   const form = useForm<AddWorkerFormValues>({
     resolver: zodResolver(workerFormSchema),
@@ -145,6 +167,7 @@ export default function AddWorkerPage() {
   })
   const selectedFloor = form.watch("floor")
   const selectedWorkLocation = form.watch("workLocation")
+  const selectedDesignation = form.watch("designation")
   const selectedDepartment = form.watch("department")
   const currentlyStayingType = form.watch("currentlyStayingType")
   const [passportPhotoPreview, setPassportPhotoPreview] = useState<string | null>(null)
@@ -153,20 +176,20 @@ export default function AddWorkerPage() {
 
   // Fetch next employee number on component mount
   useEffect(() => {
-    const fetchNextEmpNo = async () => {
+    const fetchNextEmpId = async () => {
       if (user?.contractorId) {
         try {
-          const empNo = await getNextEmpNo(user.contractorId)
-          setNextEmpNo(empNo)
+          const empNo = await getNextEmpId(user.contractorId)
+          setNextEmpId(empNo)
           form.setValue("empNo", empNo)
         } catch (error) {
-          console.error("Failed to fetch next emp no:", error)
+          console.error("Failed to fetch next emp id:", error)
           toast.error("Failed to generate employee number")
         }
       }
     }
     
-    fetchNextEmpNo()
+    fetchNextEmpId()
   }, [user?.contractorId, form])
 
   const handleFileChange = (
@@ -293,7 +316,7 @@ export default function AddWorkerPage() {
     try {
       const response = await addWorker({
         // Basic Information
-        emp_no: values.empNo || undefined,
+        emp_id: values.empNo || undefined,
         title: values.title || undefined,
         name: values.workerName,
         gender: values.gender || undefined,
@@ -304,9 +327,13 @@ export default function AddWorkerPage() {
         phone: values.contactNumber,
         email: values.email || undefined,
         emergency_contact_number: values.emergencyContactNumber || undefined,
+        emrcy_p_nm: values.emrcyPNm || undefined,
+        resp: values.resp || undefined,
+        emrcy_con_no: values.emrcyConNo || undefined,
         
         // Work Information
         designation: values.designation,
+        designation_other: values.designationOther || undefined,
         department: values.department || undefined,
         department_other: values.departmentOther || undefined,
         work_location: values.workLocation || undefined,
@@ -321,10 +348,21 @@ export default function AddWorkerPage() {
         esi_number: values.esiNumber || undefined,
         
         // Address Information
-        address: values.address || undefined,
         currently_staying_type: values.currentlyStayingType || undefined,
         permanent_address: values.permanentAddress || undefined,
         rental_address: values.rentalAddress || undefined,
+        pin_code: values.pinCode || undefined,
+        
+        // Banking Information
+        bank_name: values.bankName || undefined,
+        bank_ac: values.bankAc || undefined,
+        ifsc_code: values.ifscCode || undefined,
+        
+        // Additional Information
+        aprn_size: values.aprnSize || undefined,
+        ftwr_size: values.ftwrSize || undefined,
+        mdcl: values.mdcl || undefined,
+        remark: values.remark || undefined,
         
         // Contractor Information
         contractor_id: user.contractorId || "unknown",
@@ -396,7 +434,7 @@ export default function AddWorkerPage() {
                           {...field} 
                           readOnly 
                           className="bg-muted/50 cursor-not-allowed border-stone-200"
-                          value={nextEmpNo || field.value}
+                          value={nextEmpId || field.value}
                         />
                       </FormControl>
                       <FormMessage />
@@ -521,6 +559,25 @@ export default function AddWorkerPage() {
                     </FormItem>
                   )}
                 />
+
+                {selectedDesignation === "OTHER" && (
+                  <FormField
+                    control={form.control}
+                    name="designationOther"
+                    render={({ field }) => (
+                      <FormItem className="md:col-span-1">
+                        <FormLabel>Please specify designation</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Enter designation"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 <FormField
                   control={form.control}
@@ -701,6 +758,48 @@ export default function AddWorkerPage() {
                     </FormItem>
                   )}
                 />
+
+                <FormField
+                  control={form.control}
+                  name="emrcyPNm"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-1">
+                      <FormLabel>Emergency Person Name (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter emergency person name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="resp"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-1">
+                      <FormLabel>Relationship (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., Father, Spouse, Brother" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="emrcyConNo"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-1">
+                      <FormLabel>Additional Emergency Contact (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter additional contact" type="tel" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
               </div>
 
@@ -784,25 +883,6 @@ export default function AddWorkerPage() {
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-stone-900 border-b pb-2">Address Information</h3>
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                {/* Address Field */}
-                <FormField
-                  control={form.control}
-                  name="address"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <FormLabel>Address <span className="text-red-500">*</span></FormLabel>
-                      <FormControl>
-                        <textarea
-                          placeholder="Enter current address"
-                          className="border-input focus-visible:border-ring focus-visible:ring-ring/50 min-h-[100px] w-full resize-y rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
                 {/* Currently Staying Type */}
                 <div className="md:col-span-2">
                   <FormField
@@ -880,6 +960,130 @@ export default function AddWorkerPage() {
                     )}
                   />
                 )}
+
+                <FormField
+                  control={form.control}
+                  name="pinCode"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-1">
+                      <FormLabel>PIN Code (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter PIN code" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              </div>
+
+              {/* Banking Information Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-stone-900 border-b pb-2">Banking Information (Optional)</h3>
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="bankName"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-1">
+                      <FormLabel>Bank Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter bank name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="bankAc"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-1">
+                      <FormLabel>Bank Account Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter account number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="ifscCode"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-1">
+                      <FormLabel>IFSC Code</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter IFSC code" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              </div>
+
+              {/* Additional Information Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-stone-900 border-b pb-2">Additional Information (Optional)</h3>
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="aprnSize"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-1">
+                      <FormLabel>Apron Size</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., S, M, L, XL" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="ftwrSize"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-1">
+                      <FormLabel>Footwear Size</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., 7, 8, 9" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="mdcl"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-1">
+                      <FormLabel>Medical Status</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter medical status" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="remark"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-1">
+                      <FormLabel>Remarks</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter any remarks" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
               </div>
 

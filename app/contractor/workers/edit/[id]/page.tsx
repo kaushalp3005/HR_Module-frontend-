@@ -41,6 +41,7 @@ type EditWorkerFormValues = {
   gender: string
   dateOfJoining: string
   designation: string
+  designationOther: string
   department: string
   departmentOther: string
   workLocation: string
@@ -70,6 +71,7 @@ const defaultValues: EditWorkerFormValues = {
   gender: "",
   dateOfJoining: "",
   designation: "",
+  designationOther: "",
   department: "",
   departmentOther: "",
   workLocation: "",
@@ -94,7 +96,7 @@ const defaultValues: EditWorkerFormValues = {
 
 const titleOptions = ["MR", "MRS", "MS", "DR"]
 const genderOptions = ["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"]
-const designationOptions = ["LINE WORKER", "SUPERVISOR", "TEAM LEADER", "MACHINE OPERATOR", "TECHNICIAN"]
+const designationOptions = ["LINE WORKER", "SUPERVISOR", "TEAM LEADER", "MACHINE OPERATOR", "TECHNICIAN", "PRINTING", "OTHER"]
 const departmentOptions = ["Production", "Seasoning", "Service Floor", "Printing", "CHOCOLATE", "OTHER"]
 const locationOptions = ["A-68-Mahape", "A-101-Koparkhairne", "W-202-Koparkhairne", "A-185-Koparkhairne", "F-53-APMC", "OTHER"]
 const floorOptions = [
@@ -125,6 +127,7 @@ export default function EditWorkerPage() {
   })
   const selectedFloor = form.watch("floor")
   const selectedWorkLocation = form.watch("workLocation")
+  const selectedDesignation = form.watch("designation")
   const selectedDepartment = form.watch("department")
   const currentlyStayingType = form.watch("currentlyStayingType")
   const [passportPhotoPreview, setPassportPhotoPreview] = useState<string | null>(null)
@@ -142,12 +145,13 @@ export default function EditWorkerPage() {
         const data = await response.json()
         
         // Populate form with existing data
-        form.setValue("empNo", data.emp_no || "")
+        form.setValue("empNo", data.emp_id || "")
         form.setValue("title", data.title || "")
         form.setValue("workerName", data.name || "")
         form.setValue("gender", data.gender || "")
         form.setValue("dateOfJoining", data.date_of_joining || "")
         form.setValue("designation", data.designation || "")
+        form.setValue("designationOther", data.designation_other || "")
         form.setValue("department", data.department || "")
         form.setValue("departmentOther", data.department_other || "")
         form.setValue("workLocation", data.work_location || "")
@@ -247,7 +251,7 @@ export default function EditWorkerPage() {
     try {
       const response = await updateWorker(Number(workerId), {
         // Basic Information
-        emp_no: values.empNo || undefined,
+        emp_id: values.empNo || undefined,
         title: values.title || undefined,
         name: values.workerName,
         gender: values.gender || undefined,
@@ -261,6 +265,7 @@ export default function EditWorkerPage() {
         
         // Work Information
         designation: values.designation,
+        designation_other: values.designationOther || undefined,
         department: values.department || undefined,
         department_other: values.departmentOther || undefined,
         work_location: values.workLocation || undefined,
@@ -490,6 +495,25 @@ export default function EditWorkerPage() {
                     </FormItem>
                   )}
                 />
+
+                {selectedDesignation === "OTHER" && (
+                  <FormField
+                    control={form.control}
+                    name="designationOther"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Please specify designation</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Enter designation"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 <FormField
                   control={form.control}

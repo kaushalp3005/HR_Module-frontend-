@@ -12,12 +12,13 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Eye, Edit2, Trash2, Plus, Upload, User, Phone, Mail, Calendar, MapPin, Building, IdCard, FileText } from "lucide-react"
+import { Eye, Edit2, Trash2, Plus, Upload, User, Phone, Mail, Calendar, MapPin, Building, IdCard, FileText, Search } from "lucide-react"
+import { Input } from "@/components/ui/input"
 import Image from "next/image"
 
 interface Worker {
   id: string  // Changed to string to match ResponsiveTable requirements
-  emp_no?: string
+  emp_id?: string
   title?: string
   name: string
   gender?: string
@@ -52,12 +53,22 @@ interface Worker {
   approved_by?: string
 }
 
+const WAREHOUSES = [
+  { key: "all", label: "All" },
+  { key: "W-202", label: "W-202" },
+  { key: "A-185", label: "A-185" },
+  { key: "A-68", label: "A-68" },
+  { key: "HOH-101", label: "HOH-101" },
+]
+
 export default function WorkersStatusPage() {
   const user = useAppStore((state) => state.user)
   const [workers, setWorkers] = useState<Worker[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState("approved")
   const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null)
+  const [selectedWarehouse, setSelectedWarehouse] = useState("all")
+  const [searchQuery, setSearchQuery] = useState("")
 
   // Fetch workers from API
   useEffect(() => {
@@ -106,8 +117,8 @@ export default function WorkersStatusPage() {
   // Columns for approved workers (full details)
   const approvedColumns = [
     {
-      key: "emp_no" as const,
-      label: "Emp No",
+      key: "emp_id" as const,
+      label: "Emp ID",
       render: (value: string) => <span className="text-xs sm:text-sm">{value || "N/A"}</span>,
     },
     {
@@ -155,8 +166,8 @@ export default function WorkersStatusPage() {
   // Columns for rejected workers (only specific fields)
   const rejectedColumns = [
     {
-      key: "emp_no" as const,
-      label: "Emp No",
+      key: "emp_id" as const,
+      label: "Emp ID",
       render: (value: string) => <span className="text-xs sm:text-sm">{value || "N/A"}</span>,
     },
     {
@@ -196,11 +207,16 @@ export default function WorkersStatusPage() {
     },
   ]
 
-  // Filter workers based on active tab (only approved and rejected)
+  // Filter workers based on active tab, warehouse, and search query
   const filteredWorkers = workers.filter(worker => {
-    if (activeTab === "approved") return worker.status === "approved"
-    if (activeTab === "rejected") return worker.status === "rejected"
-    return false
+    const statusMatch = activeTab === "approved" ? worker.status === "approved" : worker.status === "rejected"
+    const warehouseMatch = selectedWarehouse === "all" || (worker.work_location?.toUpperCase().includes(selectedWarehouse.toUpperCase()))
+    const query = searchQuery.toLowerCase().trim()
+    const searchMatch = !query ||
+      worker.name?.toLowerCase().includes(query) ||
+      worker.emp_id?.toLowerCase().includes(query) ||
+      worker.phone?.toLowerCase().includes(query)
+    return statusMatch && warehouseMatch && searchMatch
   })
 
   // Count workers by status
@@ -216,7 +232,7 @@ export default function WorkersStatusPage() {
     const fields = [
       { label: "Full Name", value: worker.name, icon: null },
       { label: "Title", value: worker.title, icon: null },
-      { label: "Employee Number", value: worker.emp_no, icon: null },
+      { label: "Employee ID", value: worker.emp_id, icon: null },
       { label: "Gender", value: worker.gender, icon: null },
       { label: "Date of Birth", value: worker.date_of_birth, icon: <Calendar className="w-3 h-3" /> },
       { label: "Phone Number", value: worker.phone, icon: <Phone className="w-3 h-3" /> },
@@ -289,6 +305,49 @@ export default function WorkersStatusPage() {
           </TabsTrigger>
         </TabsList>
 
+        {/* Warehouse Filter Buttons */}
+        <div className="flex flex-wrap gap-2">
+          {WAREHOUSES.map((wh) => {
+            const count = wh.key === "all"
+              ? workers.filter(w => activeTab === "approved" ? w.status === "approved" : w.status === "rejected").length
+              : workers.filter(w => {
+                  const statusMatch = activeTab === "approved" ? w.status === "approved" : w.status === "rejected"
+                  return statusMatch && w.work_location?.toUpperCase().includes(wh.key.toUpperCase())
+                }).length
+            return (
+              <button
+                key={wh.key}
+                onClick={() => setSelectedWarehouse(wh.key)}
+                className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors border ${
+                  selectedWarehouse === wh.key
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-muted text-muted-foreground border-border hover:bg-accent hover:text-accent-foreground"
+                }`}
+              >
+                {wh.label}
+                <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                  selectedWarehouse === wh.key
+                    ? "bg-primary-foreground/20"
+                    : "bg-background"
+                }`}>
+                  {count}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by name, emp ID, or phone number..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+
         <TabsContent value="approved" className="mt-0">
           <div className="rounded-lg border border-border overflow-hidden">
             {loading ? (
@@ -303,10 +362,19 @@ export default function WorkersStatusPage() {
                 data={filteredWorkers}
                 actions={(row: Worker) => (
                   <div className="flex gap-2">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-8 w-8 p-0" 
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      title="View Details"
+                      onClick={() => setSelectedWorker(row)}
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
                       title="Edit Worker"
                       asChild
                     >
@@ -314,7 +382,7 @@ export default function WorkersStatusPage() {
                         <Edit2 className="w-4 h-4" />
                       </Link>
                     </Button>
-                    <Button
+                    {/* <Button
                       variant="ghost"
                       size="sm"
                       className="h-8 w-8 p-0 text-destructive hover:text-destructive"
@@ -322,7 +390,7 @@ export default function WorkersStatusPage() {
                       title="Delete Worker"
                     >
                       <Trash2 className="w-4 h-4" />
-                    </Button>
+                    </Button> */}
                   </div>
                 )}
               />
@@ -344,16 +412,16 @@ export default function WorkersStatusPage() {
                 data={filteredWorkers}
                 actions={(row: Worker) => (
                   <div className="flex gap-2">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-8 w-8 p-0" 
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
                       title="View Details"
                       onClick={() => setSelectedWorker(row)}
                     >
                       <Eye className="w-4 h-4" />
                     </Button>
-                    <Button
+                    {/* <Button
                       variant="ghost"
                       size="sm"
                       className="h-8 w-8 p-0 text-destructive hover:text-destructive"
@@ -361,7 +429,7 @@ export default function WorkersStatusPage() {
                       title="Delete Worker"
                     >
                       <Trash2 className="w-4 h-4" />
-                    </Button>
+                    </Button> */}
                   </div>
                 )}
               />

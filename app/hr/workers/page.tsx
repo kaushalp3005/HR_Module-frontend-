@@ -7,12 +7,13 @@ import { ResponsiveTable } from "@/components/responsive-table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Eye, Edit2, Trash2, User, Phone, MapPin, Calendar, Briefcase, Building, Hash } from "lucide-react"
+import { Eye, Edit2, Trash2, User, Phone, MapPin, Calendar, Briefcase, Building, Hash, Search } from "lucide-react"
+import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
 
 type Worker = {
   id: string
-  emp_no: string
+  emp_id: string
   name: string
   designation: string
   department: string
@@ -24,11 +25,21 @@ type Worker = {
   date_of_joining: string
 }
 
+const WAREHOUSES = [
+  { key: "all", label: "All" },
+  { key: "W-202", label: "W-202" },
+  { key: "A-185", label: "A-185" },
+  { key: "A-68", label: "A-68" },
+  { key: "HOH-101", label: "HOH-101" },
+]
+
 export default function WorkersPage() {
   const [workers, setWorkers] = useState<Worker[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [selectedWarehouse, setSelectedWarehouse] = useState("all")
+  const [searchQuery, setSearchQuery] = useState("")
 
   // Fetch approved workers only
   useEffect(() => {
@@ -94,10 +105,20 @@ export default function WorkersPage() {
     }
   }
 
+  const filteredWorkers = workers.filter(w => {
+    const warehouseMatch = selectedWarehouse === "all" || w.work_location?.toUpperCase().includes(selectedWarehouse.toUpperCase())
+    const query = searchQuery.toLowerCase().trim()
+    const searchMatch = !query ||
+      w.name?.toLowerCase().includes(query) ||
+      w.emp_id?.toLowerCase().includes(query) ||
+      w.phone?.toLowerCase().includes(query)
+    return warehouseMatch && searchMatch
+  })
+
   const columns = [
     {
-      key: "emp_no" as const,
-      label: "Emp No",
+      key: "emp_id" as const,
+      label: "Emp ID",
       render: (value: string) => <span className="text-xs sm:text-sm">{value || "N/A"}</span>,
     },
     {
@@ -131,18 +152,58 @@ export default function WorkersPage() {
     <div className="space-y-6 sm:space-y-8">
       <ResponsivePageHeader
         title="Total Workers (Active)"
-        subtitle={`${workers.length} active workers in the system`}
+        subtitle={`${filteredWorkers.length} active workers in the system`}
       />
+
+      {/* Warehouse Filter Buttons */}
+      <div className="flex flex-wrap gap-2">
+        {WAREHOUSES.map((wh) => {
+          const count = wh.key === "all"
+            ? workers.length
+            : workers.filter(w => w.work_location?.toUpperCase().includes(wh.key.toUpperCase())).length
+          return (
+            <button
+              key={wh.key}
+              onClick={() => setSelectedWarehouse(wh.key)}
+              className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors border ${
+                selectedWarehouse === wh.key
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-muted text-muted-foreground border-border hover:bg-accent hover:text-accent-foreground"
+              }`}
+            >
+              {wh.label}
+              <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                selectedWarehouse === wh.key
+                  ? "bg-primary-foreground/20"
+                  : "bg-background"
+              }`}>
+                {count}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Search Bar */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          placeholder="Search by name, emp ID, or phone number..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9"
+        />
+      </div>
 
       <div className="rounded-lg border border-border overflow-hidden">
         {loading ? (
           <div className="p-8 text-center text-muted-foreground">Loading workers...</div>
-        ) : workers.length === 0 ? (
+        ) : filteredWorkers.length === 0 ? (
           <div className="p-8 text-center text-muted-foreground">No approved workers found.</div>
         ) : (
           <ResponsiveTable
             columns={columns}
-            data={workers}
+            data={filteredWorkers}
             actions={(row) => (
               <div className="flex gap-2">
                 <Button 
@@ -189,9 +250,9 @@ export default function WorkersPage() {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Hash className="w-4 h-4" />
-                      Employee Number
+                      Employee ID
                     </div>
-                    <div className="font-medium">{selectedWorker.emp_no || "N/A"}</div>
+                    <div className="font-medium">{selectedWorker.emp_id || "N/A"}</div>
                   </div>
                   
                   <div className="space-y-1">

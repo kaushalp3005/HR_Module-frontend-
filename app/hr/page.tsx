@@ -11,7 +11,7 @@ import Link from "next/link"
 
 interface Worker {
   id: string
-  emp_no?: string
+  emp_id?: string
   name: string
   phone: string
   designation: string

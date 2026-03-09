@@ -11,7 +11,7 @@ import { AlertCircle, CheckCircle, Clock, Users } from "lucide-react"
 
 interface Worker {
   id: string
-  emp_no?: string
+  emp_id?: string
   name: string
   phone: string
   designation: string
@@ -361,9 +361,9 @@ function PendingWorkerList({ workers }: { workers: Worker[] }) {
                 <Clock className="h-3 w-3" />
                 Pending
               </Badge>
-              {worker.emp_no && (
+              {worker.emp_id && (
                 <p className="text-xs text-stone-500">
-                  Emp No: {worker.emp_no}
+                  Emp ID: {worker.emp_id}
                 </p>
               )}
             </div>

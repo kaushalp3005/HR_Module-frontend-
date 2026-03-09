@@ -4,7 +4,7 @@ export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://ztuoww4g
 
 export interface AddWorkerPayload {
   // Basic Information
-  emp_no?: string;
+  emp_id?: string;
   title?: string;
   name: string;
   gender?: string;
@@ -15,9 +15,13 @@ export interface AddWorkerPayload {
   phone: string;
   email?: string;
   emergency_contact_number?: string;
-  
+  emrcy_p_nm?: string;
+  resp?: string;
+  emrcy_con_no?: string;
+
   // Work Information
   designation: string;
+  designation_other?: string;
   department?: string;
   department_other?: string;
   work_location?: string;
@@ -36,7 +40,19 @@ export interface AddWorkerPayload {
   currently_staying_type?: string;
   permanent_address?: string;
   rental_address?: string;
-  
+  pin_code?: string;
+
+  // Banking Information
+  bank_name?: string;
+  bank_ac?: string;
+  ifsc_code?: string;
+
+  // Additional Information
+  aprn_size?: string;
+  ftwr_size?: string;
+  mdcl?: string;
+  remark?: string;
+
   // Contractor Information
   contractor_id: string;
   contractor_name: string;
@@ -61,7 +77,7 @@ export async function addWorker(payload: AddWorkerPayload): Promise<WorkerRespon
   const formData = new FormData();
   
   // Add all text fields
-  if (payload.emp_no) formData.append('emp_no', payload.emp_no);
+  if (payload.emp_id) formData.append('emp_id', payload.emp_id);
   if (payload.title) formData.append('title', payload.title);
   formData.append('name', payload.name);
   if (payload.gender) formData.append('gender', payload.gender);
@@ -71,8 +87,12 @@ export async function addWorker(payload: AddWorkerPayload): Promise<WorkerRespon
   formData.append('phone', payload.phone);
   if (payload.email) formData.append('email', payload.email);
   if (payload.emergency_contact_number) formData.append('emergency_contact_number', payload.emergency_contact_number);
-  
+  if (payload.emrcy_p_nm) formData.append('emrcy_p_nm', payload.emrcy_p_nm);
+  if (payload.resp) formData.append('resp', payload.resp);
+  if (payload.emrcy_con_no) formData.append('emrcy_con_no', payload.emrcy_con_no);
+
   formData.append('designation', payload.designation);
+  if (payload.designation_other) formData.append('designation_other', payload.designation_other);
   if (payload.department) formData.append('department', payload.department);
   if (payload.department_other) formData.append('department_other', payload.department_other);
   if (payload.work_location) formData.append('work_location', payload.work_location);
@@ -89,7 +109,17 @@ export async function addWorker(payload: AddWorkerPayload): Promise<WorkerRespon
   if (payload.currently_staying_type) formData.append('currently_staying_type', payload.currently_staying_type);
   if (payload.permanent_address) formData.append('permanent_address', payload.permanent_address);
   if (payload.rental_address) formData.append('rental_address', payload.rental_address);
-  
+  if (payload.pin_code) formData.append('pin_code', payload.pin_code);
+
+  if (payload.bank_name) formData.append('bank_name', payload.bank_name);
+  if (payload.bank_ac) formData.append('bank_ac', payload.bank_ac);
+  if (payload.ifsc_code) formData.append('ifsc_code', payload.ifsc_code);
+
+  if (payload.aprn_size) formData.append('aprn_size', payload.aprn_size);
+  if (payload.ftwr_size) formData.append('ftwr_size', payload.ftwr_size);
+  if (payload.mdcl) formData.append('mdcl', payload.mdcl);
+  if (payload.remark) formData.append('remark', payload.remark);
+
   formData.append('contractor_id', payload.contractor_id);
   formData.append('contractor_name', payload.contractor_name);
   
@@ -217,7 +247,7 @@ export async function updateWorker(workerId: number, payload: Partial<AddWorkerP
   const formData = new FormData();
   
   // Add all fields that are provided
-  if (payload.emp_no !== undefined) formData.append('emp_no', payload.emp_no);
+  if (payload.emp_id !== undefined) formData.append('emp_id', payload.emp_id);
   if (payload.title !== undefined) formData.append('title', payload.title);
   if (payload.name !== undefined) formData.append('name', payload.name);
   if (payload.gender !== undefined) formData.append('gender', payload.gender);
@@ -229,6 +259,7 @@ export async function updateWorker(workerId: number, payload: Partial<AddWorkerP
   if (payload.emergency_contact_number !== undefined) formData.append('emergency_contact_number', payload.emergency_contact_number);
   
   if (payload.designation !== undefined) formData.append('designation', payload.designation);
+  if (payload.designation_other !== undefined) formData.append('designation_other', payload.designation_other);
   if (payload.department !== undefined) formData.append('department', payload.department);
   if (payload.department_other !== undefined) formData.append('department_other', payload.department_other);
   if (payload.work_location !== undefined) formData.append('work_location', payload.work_location);
@@ -293,18 +324,18 @@ export async function deleteWorker(workerId: number): Promise<WorkerResponse> {
 /**
  * Get next employee number for contractor
  */
-export async function getNextEmpNo(contractorId: string): Promise<string> {
+export async function getNextEmpId(contractorId: string): Promise<string> {
   try {
-    const response = await fetch(`${API_BASE_URL}/workers/next-emp-no/${contractorId}`);
+    const response = await fetch(`${API_BASE_URL}/workers/next-emp-id/${contractorId}`);
     
     if (!response.ok) {
-      throw new Error('Failed to fetch next employee number');
+      throw new Error('Failed to fetch next employee ID');
     }
     
     const data = await response.json();
-    return data.next_emp_no;
+    return data.next_emp_id;
   } catch (error) {
-    console.error('Get next emp no error:', error);
+    console.error('Get next emp id error:', error);
     throw error;
   }
 }

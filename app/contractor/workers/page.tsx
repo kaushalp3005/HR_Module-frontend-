@@ -13,7 +13,7 @@ import { Eye, Edit2, Trash2, Plus, Upload } from "lucide-react"
 
 interface Worker {
   id: string  // Changed to string to match ResponsiveTable requirements
-  emp_no: string
+  emp_id: string
   name: string
   phone: string
   designation: string
@@ -24,10 +24,19 @@ interface Worker {
   contractor_id: string
 }
 
+const WAREHOUSES = [
+  { key: "all", label: "All" },
+  { key: "W-202", label: "W-202" },
+  { key: "A-185", label: "A-185" },
+  { key: "A-68", label: "A-68" },
+  { key: "HOH-101", label: "HOH-101" },
+]
+
 export default function ContractorWorkersPage() {
   const user = useAppStore((state) => state.user)
   const [workers, setWorkers] = useState<Worker[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedWarehouse, setSelectedWarehouse] = useState("all")
 
   // Fetch workers from API
   useEffect(() => {
@@ -68,10 +77,14 @@ export default function ContractorWorkersPage() {
     }
   }
 
+  const filteredWorkers = selectedWarehouse === "all"
+    ? workers
+    : workers.filter(w => w.work_location?.toUpperCase().includes(selectedWarehouse.toUpperCase()))
+
   const columns = [
     {
-      key: "emp_no" as const,
-      label: "Emp No",
+      key: "emp_id" as const,
+      label: "Emp ID",
       render: (value: string) => <span className="text-xs sm:text-sm">{value || "N/A"}</span>,
     },
     {
@@ -123,7 +136,7 @@ export default function ContractorWorkersPage() {
     <div className="space-y-6 sm:space-y-8">
       <ResponsivePageHeader
         title="Added Workers"
-        subtitle="Manage your worker profiles"
+        subtitle={`${filteredWorkers.length} workers`}
         actions={
           <div className="flex gap-2">
             <Button asChild className="gap-2 text-xs sm:text-sm" variant="outline">
@@ -144,15 +157,44 @@ export default function ContractorWorkersPage() {
         }
       />
 
+      {/* Warehouse Filter Buttons */}
+      <div className="flex flex-wrap gap-2">
+        {WAREHOUSES.map((wh) => {
+          const count = wh.key === "all"
+            ? workers.length
+            : workers.filter(w => w.work_location?.toUpperCase().includes(wh.key.toUpperCase())).length
+          return (
+            <button
+              key={wh.key}
+              onClick={() => setSelectedWarehouse(wh.key)}
+              className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors border ${
+                selectedWarehouse === wh.key
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-muted text-muted-foreground border-border hover:bg-accent hover:text-accent-foreground"
+              }`}
+            >
+              {wh.label}
+              <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                selectedWarehouse === wh.key
+                  ? "bg-primary-foreground/20"
+                  : "bg-background"
+              }`}>
+                {count}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+
       <div className="rounded-lg border border-border overflow-hidden">
         {loading ? (
           <div className="p-8 text-center text-muted-foreground">Loading workers...</div>
-        ) : workers.length === 0 ? (
-          <div className="p-8 text-center text-muted-foreground">No workers found. Add your first worker!</div>
+        ) : filteredWorkers.length === 0 ? (
+          <div className="p-8 text-center text-muted-foreground">No workers found.</div>
         ) : (
           <ResponsiveTable
             columns={columns}
-            data={workers}
+            data={filteredWorkers}
               actions={(row: Worker) => (
                 <div className="flex gap-2">
                   <Button 

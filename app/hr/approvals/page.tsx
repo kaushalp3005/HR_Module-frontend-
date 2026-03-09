@@ -16,7 +16,7 @@ import Image from "next/image"
 
 type Worker = {
   id: number
-  emp_no?: string
+  emp_id?: string
   title?: string
   name: string
   gender?: string
@@ -49,6 +49,14 @@ type Worker = {
   created_at: string
 }
 
+const WAREHOUSES = [
+  { key: "all", label: "All" },
+  { key: "W-202", label: "W-202" },
+  { key: "A-185", label: "A-185" },
+  { key: "A-68", label: "A-68" },
+  { key: "HOH-101", label: "HOH-101" },
+]
+
 export default function ApprovalsPage() {
   const [pendingWorkers, setPendingWorkers] = useState<Worker[]>([])
   const [loading, setLoading] = useState(true)
@@ -56,6 +64,7 @@ export default function ApprovalsPage() {
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false)
   const [rejectionReason, setRejectionReason] = useState("")
   const [processingApproval, setProcessingApproval] = useState(false)
+  const [selectedWarehouse, setSelectedWarehouse] = useState("all")
   const { user } = useAppStore()
 
   // Fetch pending workers
@@ -189,7 +198,7 @@ export default function ApprovalsPage() {
     const fields = [
       { label: "Full Name", value: worker.name, icon: null },
       { label: "Title", value: worker.title, icon: null },
-      { label: "Employee Number", value: worker.emp_no, icon: null },
+      { label: "Employee ID", value: worker.emp_id, icon: null },
       { label: "Gender", value: worker.gender, icon: null },
       { label: "Date of Birth", value: worker.date_of_birth, icon: <Calendar className="w-3 h-3" /> },
       { label: "Phone Number", value: worker.phone, icon: <Phone className="w-3 h-3" /> },
@@ -239,12 +248,45 @@ export default function ApprovalsPage() {
     return fields.filter(field => field.value && field.value !== "")
   }
 
+  const filteredPendingWorkers = selectedWarehouse === "all"
+    ? pendingWorkers
+    : pendingWorkers.filter(w => w.work_location?.toUpperCase().includes(selectedWarehouse.toUpperCase()))
+
   return (
     <div className="space-y-6 sm:space-y-8">
-      <ResponsivePageHeader 
-        title="Approvals Queue" 
-        subtitle={`${pendingWorkers.length} workers pending approval`} 
+      <ResponsivePageHeader
+        title="Approvals Queue"
+        subtitle={`${filteredPendingWorkers.length} workers pending approval`}
       />
+
+      {/* Warehouse Filter Buttons */}
+      <div className="flex flex-wrap gap-2">
+        {WAREHOUSES.map((wh) => {
+          const count = wh.key === "all"
+            ? pendingWorkers.length
+            : pendingWorkers.filter(w => w.work_location?.toUpperCase().includes(wh.key.toUpperCase())).length
+          return (
+            <button
+              key={wh.key}
+              onClick={() => setSelectedWarehouse(wh.key)}
+              className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors border ${
+                selectedWarehouse === wh.key
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-muted text-muted-foreground border-border hover:bg-accent hover:text-accent-foreground"
+              }`}
+            >
+              {wh.label}
+              <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                selectedWarehouse === wh.key
+                  ? "bg-primary-foreground/20"
+                  : "bg-background"
+              }`}>
+                {count}
+              </span>
+            </button>
+          )
+        })}
+      </div>
 
       <div className="grid grid-cols-1 gap-4 sm:gap-6">
         {loading ? (
@@ -253,14 +295,14 @@ export default function ApprovalsPage() {
               <p className="text-muted-foreground text-sm sm:text-base">Loading pending workers...</p>
             </CardContent>
           </Card>
-        ) : pendingWorkers.length === 0 ? (
+        ) : filteredPendingWorkers.length === 0 ? (
           <Card>
             <CardContent className="pt-6 sm:pt-8 text-center">
               <p className="text-muted-foreground text-sm sm:text-base">No pending approvals</p>
             </CardContent>
           </Card>
         ) : (
-          pendingWorkers.map((worker) => (
+          filteredPendingWorkers.map((worker) => (
             <Card key={worker.id} className="container-responsive">
               <CardHeader>
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
@@ -278,8 +320,8 @@ export default function ApprovalsPage() {
               <CardContent className="space-y-4 sm:space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
                   <div>
-                    <p className="text-muted-foreground text-xs sm:text-sm">Employee No</p>
-                    <p className="font-medium text-sm sm:text-base">{worker.emp_no || "N/A"}</p>
+                    <p className="text-muted-foreground text-xs sm:text-sm">Employee ID</p>
+                    <p className="font-medium text-sm sm:text-base">{worker.emp_id || "N/A"}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground text-xs sm:text-sm">Phone</p>
