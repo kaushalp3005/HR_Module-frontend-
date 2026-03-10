@@ -314,7 +314,7 @@ export default function AddWorkerPage() {
     })
 
     try {
-      const response = await addWorker({
+      const workerPayload = {
         // Basic Information
         emp_id: values.empNo || undefined,
         title: values.title || undefined,
@@ -372,7 +372,16 @@ export default function AddWorkerPage() {
         passport_photo: values.passportPhoto,
         aadhaar_photo: values.aadharCard,
         pan_photo: values.panCard || undefined,
-      })
+      };
+
+      console.log("📋 Submitting worker data:", {
+        ...workerPayload,
+        passport_photo: workerPayload.passport_photo ? `File: ${workerPayload.passport_photo.name} (${workerPayload.passport_photo.size} bytes)` : null,
+        aadhaar_photo: workerPayload.aadhaar_photo ? `File: ${workerPayload.aadhaar_photo.name} (${workerPayload.aadhaar_photo.size} bytes)` : null,
+        pan_photo: workerPayload.pan_photo ? `File: ${workerPayload.pan_photo.name} (${workerPayload.pan_photo.size} bytes)` : null,
+      });
+
+      const response = await addWorker(workerPayload)
 
       toast.success("Worker Added Successfully!", {
         description: `Worker ID: ${response.worker_id}. Data encrypted and stored securely.`,
