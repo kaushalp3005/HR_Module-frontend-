@@ -6,7 +6,7 @@ import type { ReactNode } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { CalendarDays, Check, Clock, Users } from "lucide-react"
+import { CalendarDays, Check, Clock, Users, LogOut } from "lucide-react"
 import Link from "next/link"
 
 interface Worker {
@@ -46,6 +46,8 @@ export default function HRDashboard() {
 
   const approvalQueue = useMemo(() => workers.filter((w) => w.status === "pending"), [workers])
   const pendingApprovals = approvalQueue.length
+  const activeWorkers = useMemo(() => workers.filter((w) => w.status === "approved"), [workers])
+  const exitedWorkers = useMemo(() => workers.filter((w) => w.status === "exit"), [workers])
 
   const today = new Date()
   const formattedDate = today.toLocaleDateString(undefined, {
@@ -79,7 +81,7 @@ export default function HRDashboard() {
               <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-white/80">
                 HR Dashboard
               </div>
-              <h2 className="mt-4 text-2xl font-semibold sm:text-3xl">Managing {workers.length} Workers Efficiently!</h2>
+              <h2 className="mt-4 text-2xl font-semibold sm:text-3xl">Managing {activeWorkers.length} Workers Efficiently!</h2>
               <p className="mt-3 max-w-xl text-sm text-white/80 sm:text-base">
                 Here&apos;s a snapshot of the key indicators driving your HR operations today. Track recruitment, payroll,
                 and compliance in one place.
@@ -95,19 +97,19 @@ export default function HRDashboard() {
           </div>
           <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
             <div className="rounded-2xl bg-white/15 p-4 backdrop-blur">
-              <p className="text-xs uppercase tracking-wide text-white/70">Total Employees</p>
+              <p className="text-xs uppercase tracking-wide text-white/70">Active Employees</p>
+              <p className="mt-2 text-2xl font-bold">{activeWorkers.length}</p>
+              <p className="mt-1 text-xs text-emerald-200">Currently working</p>
+            </div>
+            <div className="rounded-2xl bg-white/15 p-4 backdrop-blur">
+              <p className="text-xs uppercase tracking-wide text-white/70">Exited Workers</p>
+              <p className="mt-2 text-2xl font-bold">{exitedWorkers.length}</p>
+              <p className="mt-1 text-xs text-orange-200">Left the organisation</p>
+            </div>
+            <div className="rounded-2xl bg-white/15 p-4 backdrop-blur">
+              <p className="text-xs uppercase tracking-wide text-white/70">Total Workers</p>
               <p className="mt-2 text-2xl font-bold">{workers.length}</p>
-              <p className="mt-1 text-xs text-emerald-200">+2 this week</p>
-            </div>
-            <div className="rounded-2xl bg-white/15 p-4 backdrop-blur">
-              <p className="text-xs uppercase tracking-wide text-white/70">Working Days</p>
-              <p className="mt-2 text-2xl font-bold">24</p>
-              <p className="mt-1 text-xs text-white/70">Month to date</p>
-            </div>
-            <div className="rounded-2xl bg-white/15 p-4 backdrop-blur">
-              <p className="text-xs uppercase tracking-wide text-white/70">Payroll Processed</p>
-              <p className="mt-2 text-2xl font-bold">121</p>
-              <p className="mt-1 text-xs text-white/70">of 130</p>
+              <p className="mt-1 text-xs text-white/70">All time</p>
             </div>
             <div className="rounded-2xl bg-white/15 p-4 backdrop-blur">
               <p className="text-xs uppercase tracking-wide text-white/70">Approvals Pending</p>
@@ -153,12 +155,18 @@ export default function HRDashboard() {
         </Card>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-2">
+      <section className="grid gap-6 lg:grid-cols-3">
         <MetricCard
           icon={<Users className="h-5 w-5 text-[#3a8bfd]" />}
-          title="Total Workers"
-          value={workers.length}
-          subtitle="Active workforce"
+          title="Active Workers"
+          value={activeWorkers.length}
+          subtitle="Currently working"
+        />
+        <MetricCard
+          icon={<LogOut className="h-5 w-5 text-orange-500" />}
+          title="Exited Workers"
+          value={exitedWorkers.length}
+          subtitle="Left the organisation"
         />
         <MetricCard
           icon={<Clock className="h-5 w-5 text-[#3a8bfd]" />}

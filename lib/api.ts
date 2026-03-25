@@ -301,6 +301,48 @@ export async function updateWorker(workerId: number, payload: Partial<AddWorkerP
 }
 
 /**
+ * Mark worker as exited
+ */
+export async function exitWorker(workerId: number): Promise<WorkerResponse> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/workers/${workerId}/exit`, {
+      method: 'PUT',
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to exit worker');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Exit worker error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Retain an exited worker (sends for HR re-approval)
+ */
+export async function retainWorker(workerId: number): Promise<WorkerResponse> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/workers/${workerId}/retain`, {
+      method: 'PUT',
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to retain worker');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Retain worker error:', error);
+    throw error;
+  }
+}
+
+/**
  * Delete worker
  */
 export async function deleteWorker(workerId: number): Promise<WorkerResponse> {
