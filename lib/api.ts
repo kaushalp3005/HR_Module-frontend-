@@ -49,6 +49,7 @@ export interface AddWorkerPayload {
 
   // Additional Information
   aprn_size?: string;
+  apron_locker_no?: string;
   ftwr_size?: string;
   mdcl?: string;
   remark?: string;
@@ -116,6 +117,7 @@ export async function addWorker(payload: AddWorkerPayload): Promise<WorkerRespon
   if (payload.ifsc_code) formData.append('ifsc_code', payload.ifsc_code);
 
   if (payload.aprn_size) formData.append('aprn_size', payload.aprn_size);
+  if (payload.apron_locker_no) formData.append('apron_locker_no', payload.apron_locker_no);
   if (payload.ftwr_size) formData.append('ftwr_size', payload.ftwr_size);
   if (payload.mdcl) formData.append('mdcl', payload.mdcl);
   if (payload.remark) formData.append('remark', payload.remark);

@@ -20,6 +20,8 @@ import * as XLSX from "xlsx"
 interface Worker {
   id: string  // Changed to string to match ResponsiveTable requirements
   emp_id?: string
+  old_employee_id?: string
+  sr_no?: number
   title?: string
   name: string
   gender?: string
@@ -27,7 +29,11 @@ interface Worker {
   phone: string
   email?: string
   emergency_contact_number?: string
+  emrcy_p_nm?: string
+  resp?: string
+  emrcy_con_no?: string
   designation: string
+  designation_other?: string
   department?: string
   department_other?: string
   work_location?: string
@@ -41,6 +47,15 @@ interface Worker {
   currently_staying_type?: string
   permanent_address?: string
   rental_address?: string
+  pin_code?: string
+  bank_name?: string
+  bank_ac?: string
+  ifsc_code?: string
+  aprn_size?: string
+  apron_locker_no?: string
+  ftwr_size?: string
+  mdcl?: string
+  remark?: string
   contractor_id: string
   contractor_name?: string
   status: string
@@ -51,7 +66,9 @@ interface Worker {
   pan_photo_url?: string
   rejection_reason?: string
   created_at?: string
+  updated_at?: string
   approved_by?: string
+  approved_at?: string
   lwd?: string
 }
 
@@ -344,13 +361,24 @@ export default function WorkersStatusPage() {
       { label: "Full Name", value: worker.name, icon: null },
       { label: "Title", value: worker.title, icon: null },
       { label: "Employee ID", value: worker.emp_id, icon: null },
+      { label: "Old Employee ID", value: worker.old_employee_id, icon: null },
+      { label: "Sr. No.", value: worker.sr_no?.toString(), icon: null },
       { label: "Gender", value: worker.gender, icon: null },
       { label: "Date of Birth", value: worker.date_of_birth, icon: <Calendar className="w-3 h-3" /> },
       { label: "Phone Number", value: worker.phone, icon: <Phone className="w-3 h-3" /> },
       { label: "Email Address", value: worker.email, icon: <Mail className="w-3 h-3" /> },
-      { label: "Emergency Contact", value: worker.emergency_contact_number, icon: <Phone className="w-3 h-3" /> },
       { label: "Date of Joining", value: worker.date_of_joining, icon: <Calendar className="w-3 h-3" /> },
       { label: "Application Date", value: worker.created_at ? new Date(worker.created_at).toLocaleDateString() : null, icon: <Calendar className="w-3 h-3" /> },
+    ]
+    return fields.filter(field => field.value && field.value !== "")
+  }
+
+  const getEmergencyContactFields = (worker: Worker) => {
+    const fields = [
+      { label: "Emergency Contact Number", value: worker.emergency_contact_number, icon: <Phone className="w-3 h-3" /> },
+      { label: "Emergency Person Name", value: worker.emrcy_p_nm, icon: <User className="w-3 h-3" /> },
+      { label: "Relationship", value: worker.resp, icon: null },
+      { label: "Alternate Emergency Number", value: worker.emrcy_con_no, icon: <Phone className="w-3 h-3" /> },
     ]
     return fields.filter(field => field.value && field.value !== "")
   }
@@ -358,6 +386,7 @@ export default function WorkersStatusPage() {
   const getWorkInfoFields = (worker: Worker) => {
     const fields = [
       { label: "Designation", value: worker.designation, icon: null },
+      { label: "Designation (Other)", value: worker.designation_other, icon: null },
       { label: "Department", value: worker.department, icon: null },
       { label: "Department (Other)", value: worker.department_other, icon: null },
       { label: "Work Location", value: worker.work_location, icon: <MapPin className="w-3 h-3" /> },
@@ -386,6 +415,31 @@ export default function WorkersStatusPage() {
       { label: "Staying Type", value: worker.currently_staying_type, icon: null },
       { label: "Permanent Address", value: worker.permanent_address, icon: <MapPin className="w-3 h-3" /> },
       { label: "Rental Address", value: worker.rental_address, icon: <MapPin className="w-3 h-3" /> },
+      { label: "PIN Code", value: worker.pin_code, icon: null },
+    ]
+    return fields.filter(field => field.value && field.value !== "")
+  }
+
+  const getBankingFields = (worker: Worker) => {
+    const fields = [
+      { label: "Bank Name", value: worker.bank_name, icon: null },
+      { label: "Account Number", value: worker.bank_ac, icon: null },
+      { label: "IFSC Code", value: worker.ifsc_code, icon: null },
+    ]
+    return fields.filter(field => field.value && field.value !== "")
+  }
+
+  const getAdditionalFields = (worker: Worker) => {
+    const fields = [
+      { label: "Apron Size", value: worker.aprn_size, icon: null },
+      { label: "Apron Locker No.", value: worker.apron_locker_no, icon: null },
+      { label: "Footwear Size", value: worker.ftwr_size, icon: null },
+      { label: "Medical Status", value: worker.mdcl, icon: null },
+      { label: "Remark", value: worker.remark, icon: null },
+      { label: "Last Working Day", value: worker.lwd, icon: <Calendar className="w-3 h-3" /> },
+      { label: "Approved By", value: worker.approved_by, icon: null },
+      { label: "Approved At", value: worker.approved_at ? new Date(worker.approved_at).toLocaleString() : null, icon: <Calendar className="w-3 h-3" /> },
+      { label: "Last Updated", value: worker.updated_at ? new Date(worker.updated_at).toLocaleString() : null, icon: <Calendar className="w-3 h-3" /> },
     ]
     return fields.filter(field => field.value && field.value !== "")
   }
@@ -664,6 +718,27 @@ export default function WorkersStatusPage() {
                 </div>
               )}
 
+              {/* Emergency Contact */}
+              {getEmergencyContactFields(selectedWorker).length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <Phone className="w-4 h-4" />
+                    Emergency Contact
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {getEmergencyContactFields(selectedWorker).map((field, index) => (
+                      <div key={index}>
+                        <Label className="text-muted-foreground">{field.label}</Label>
+                        <p className="font-medium flex items-center gap-1">
+                          {field.icon}
+                          {field.value}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Work Information */}
               {getWorkInfoFields(selectedWorker).length > 0 && (
                 <div className="space-y-4">
@@ -720,6 +795,48 @@ export default function WorkersStatusPage() {
                         <p className="font-medium flex items-start gap-1">
                           {field.icon}
                           <span>{field.value}</span>
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Banking Information */}
+              {getBankingFields(selectedWorker).length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <Building className="w-4 h-4" />
+                    Banking Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {getBankingFields(selectedWorker).map((field, index) => (
+                      <div key={index}>
+                        <Label className="text-muted-foreground">{field.label}</Label>
+                        <p className="font-medium font-mono flex items-center gap-1">
+                          {field.icon}
+                          {field.value}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Additional Information */}
+              {getAdditionalFields(selectedWorker).length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    Additional Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {getAdditionalFields(selectedWorker).map((field, index) => (
+                      <div key={index}>
+                        <Label className="text-muted-foreground">{field.label}</Label>
+                        <p className="font-medium flex items-center gap-1">
+                          {field.icon}
+                          {field.value}
                         </p>
                       </div>
                     ))}

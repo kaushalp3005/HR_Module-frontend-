@@ -83,6 +83,7 @@ const workerFormSchema = z.object({
   bankAc: z.string().optional(),
   ifscCode: z.string().optional(),
   aprnSize: z.string().optional(),
+  apronLockerNo: z.string().optional(),
   ftwrSize: z.string().optional(),
   mdcl: z.string().optional(),
   remark: z.string().optional(),
@@ -123,6 +124,7 @@ const defaultValues: Partial<AddWorkerFormValues> = {
   bankAc: "",
   ifscCode: "",
   aprnSize: "",
+  apronLockerNo: "",
   ftwrSize: "",
   mdcl: "",
   remark: "",
@@ -360,6 +362,7 @@ export default function AddWorkerPage() {
         
         // Additional Information
         aprn_size: values.aprnSize || undefined,
+        apron_locker_no: values.apronLockerNo || undefined,
         ftwr_size: values.ftwrSize || undefined,
         mdcl: values.mdcl || undefined,
         remark: values.remark || undefined,
@@ -1046,6 +1049,20 @@ export default function AddWorkerPage() {
                       <FormLabel>Apron Size</FormLabel>
                       <FormControl>
                         <Input placeholder="e.g., S, M, L, XL" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="apronLockerNo"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-1">
+                      <FormLabel>Apron Locker No.</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., 101" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
