@@ -305,10 +305,12 @@ export async function updateWorker(workerId: number, payload: Partial<AddWorkerP
 /**
  * Mark worker as exited
  */
-export async function exitWorker(workerId: number): Promise<WorkerResponse> {
+export async function exitWorker(workerId: number, resignedDate: string): Promise<WorkerResponse> {
   try {
     const response = await fetch(`${API_BASE_URL}/workers/${workerId}/exit`, {
       method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ resigned_date: resignedDate }),
     });
 
     if (!response.ok) {

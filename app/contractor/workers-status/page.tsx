@@ -4,9 +4,10 @@ import Link from "next/link"
 import { toast } from "sonner"
 
 import { useAppStore } from "@/lib/store"
-import { getWorkers, deleteWorker as deleteWorkerAPI, exitWorker as exitWorkerAPI, retainWorker as retainWorkerAPI } from "@/lib/api"
+import { getWorkers, exitWorker as exitWorkerAPI, retainWorker as retainWorkerAPI } from "@/lib/api"
 import { ResponsivePageHeader } from "@/components/responsive-page-header"
 import { ResponsiveTable } from "@/components/responsive-table"
+import { ExitWorkerDialog, type ExitWorkerTarget } from "@/components/exit-worker-dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -69,7 +70,7 @@ interface Worker {
   updated_at?: string
   approved_by?: string
   approved_at?: string
-  lwd?: string
+  resigned_date?: string
 }
 
 const WAREHOUSES = [
@@ -88,6 +89,7 @@ export default function WorkersStatusPage() {
   const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null)
   const [selectedWarehouse, setSelectedWarehouse] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
+  const [exitTarget, setExitTarget] = useState<ExitWorkerTarget | null>(null)
 
   // Fetch workers from API
   useEffect(() => {
@@ -119,30 +121,15 @@ export default function WorkersStatusPage() {
     }
   }
 
-  const handleDelete = async (id: string) => {
-    if (confirm("Are you sure you want to delete this worker?")) {
-      try {
-        await deleteWorkerAPI(Number(id))
-        toast.success("Worker deleted successfully")
-        // Refresh the list
-        fetchWorkers()
-      } catch (error) {
-        console.error("Failed to delete worker:", error)
-        toast.error("Failed to delete worker")
-      }
-    }
-  }
-
-  const handleExit = async (id: string) => {
-    if (confirm("Are you sure you want to mark this worker as exited?")) {
-      try {
-        await exitWorkerAPI(Number(id))
-        toast.success("Worker marked as exited successfully")
-        fetchWorkers()
-      } catch (error) {
-        console.error("Failed to exit worker:", error)
-        toast.error("Failed to exit worker")
-      }
+  const handleExitConfirm = async (id: string, resignedDate: string) => {
+    try {
+      await exitWorkerAPI(Number(id), resignedDate)
+      toast.success("Worker marked as exited successfully")
+      setExitTarget(null)
+      fetchWorkers()
+    } catch (error) {
+      console.error("Failed to exit worker:", error)
+      toast.error(error instanceof Error ? error.message : "Failed to exit worker")
     }
   }
 
@@ -163,42 +150,50 @@ export default function WorkersStatusPage() {
   const approvedColumns = [
     {
       key: "emp_id" as const,
+      width: "10%",
       label: "Emp ID",
       render: (value: string) => <span className="text-xs sm:text-sm">{value || "N/A"}</span>,
     },
     {
       key: "name" as const,
+      width: "19%",
       label: "Worker Name",
       render: (value: string) => <span className="font-medium text-sm sm:text-base">{value}</span>,
     },
     {
       key: "phone" as const,
+      width: "11%",
       label: "Phone",
       render: (value: string) => <span className="text-xs sm:text-sm">{value}</span>,
     },
     {
       key: "designation" as const,
+      width: "11%",
       label: "Designation",
       render: (value: string) => <span className="text-xs sm:text-sm">{value}</span>,
     },
     {
       key: "department" as const,
+      width: "12%",
       label: "Department",
       render: (value: string) => <span className="text-xs sm:text-sm">{value || "N/A"}</span>,
     },
     {
       key: "work_location" as const,
+      width: "14%",
       label: "Work Location",
       render: (value: string) => <span className="text-xs sm:text-sm">{value || "N/A"}</span>,
     },
     {
       key: "date_of_joining" as const,
+      width: "10%",
       label: "Joining Date",
       render: (value: string) => <span className="text-xs sm:text-sm">{value || "N/A"}</span>,
       hidden: true,
     },
     {
       key: "status" as const,
+      width: "9%",
       label: "Status",
       render: (value: string) => (
         <Badge variant="default" className="text-xs sm:text-sm bg-green-600 hover:bg-green-700">
@@ -212,26 +207,31 @@ export default function WorkersStatusPage() {
   const rejectedColumns = [
     {
       key: "emp_id" as const,
+      width: "11%",
       label: "Emp ID",
       render: (value: string) => <span className="text-xs sm:text-sm">{value || "N/A"}</span>,
     },
     {
       key: "name" as const,
+      width: "20%",
       label: "Worker Name",
       render: (value: string) => <span className="font-medium text-sm sm:text-base">{value}</span>,
     },
     {
       key: "phone" as const,
+      width: "12%",
       label: "Phone",
       render: (value: string) => <span className="text-xs sm:text-sm">{value}</span>,
     },
     {
       key: "designation" as const,
+      width: "13%",
       label: "Designation",
       render: (value: string) => <span className="text-xs sm:text-sm">{value}</span>,
     },
     {
       key: "status" as const,
+      width: "10%",
       label: "Status",
       render: (value: string) => (
         <Badge variant="destructive" className="text-xs sm:text-sm">
@@ -241,9 +241,10 @@ export default function WorkersStatusPage() {
     },
     {
       key: "rejection_reason" as const,
+      width: "26%",
       label: "Rejection Reason",
       render: (value: string) => (
-        <div className="max-w-xs">
+        <div className="whitespace-normal break-words">
           <span className="text-xs sm:text-sm text-muted-foreground">
             {value || "No reason provided"}
           </span>
@@ -256,36 +257,43 @@ export default function WorkersStatusPage() {
   const exitColumns = [
     {
       key: "emp_id" as const,
+      width: "10%",
       label: "Emp ID",
       render: (value: string) => <span className="text-xs sm:text-sm">{value || "N/A"}</span>,
     },
     {
       key: "name" as const,
+      width: "20%",
       label: "Worker Name",
       render: (value: string) => <span className="font-medium text-sm sm:text-base">{value}</span>,
     },
     {
       key: "phone" as const,
+      width: "11%",
       label: "Phone",
       render: (value: string) => <span className="text-xs sm:text-sm">{value}</span>,
     },
     {
       key: "designation" as const,
+      width: "12%",
       label: "Designation",
       render: (value: string) => <span className="text-xs sm:text-sm">{value}</span>,
     },
     {
       key: "work_location" as const,
+      width: "15%",
       label: "Work Location",
       render: (value: string) => <span className="text-xs sm:text-sm">{value || "N/A"}</span>,
     },
     {
-      key: "lwd" as const,
-      label: "Last Working Day",
+      key: "resigned_date" as const,
+      width: "11%",
+      label: "Resigned Date",
       render: (value: string) => <span className="text-xs sm:text-sm">{value || "N/A"}</span>,
     },
     {
       key: "status" as const,
+      width: "9%",
       label: "Status",
       render: () => (
         <Badge variant="secondary" className="text-xs sm:text-sm bg-orange-500 text-white hover:bg-orange-600">
@@ -342,7 +350,7 @@ export default function WorkersStatusPage() {
       "Permanent Address": worker.permanent_address || "N/A",
       "Status": worker.status,
       ...(worker.status === "rejected" ? { "Rejection Reason": worker.rejection_reason || "N/A" } : {}),
-      ...(worker.status === "exit" ? { "Last Working Day": worker.lwd || "N/A" } : {}),
+      ...(worker.status === "exit" ? { "Resigned Date": worker.resigned_date || "N/A" } : {}),
     }))
 
     const worksheet = XLSX.utils.json_to_sheet(dataToExport)
@@ -436,7 +444,7 @@ export default function WorkersStatusPage() {
       { label: "Footwear Size", value: worker.ftwr_size, icon: null },
       { label: "Medical Status", value: worker.mdcl, icon: null },
       { label: "Remark", value: worker.remark, icon: null },
-      { label: "Last Working Day", value: worker.lwd, icon: <Calendar className="w-3 h-3" /> },
+      { label: "Resigned Date", value: worker.resigned_date, icon: <Calendar className="w-3 h-3" /> },
       { label: "Approved By", value: worker.approved_by, icon: null },
       { label: "Approved At", value: worker.approved_at ? new Date(worker.approved_at).toLocaleString() : null, icon: <Calendar className="w-3 h-3" /> },
       { label: "Last Updated", value: worker.updated_at ? new Date(worker.updated_at).toLocaleString() : null, icon: <Calendar className="w-3 h-3" /> },
@@ -542,8 +550,10 @@ export default function WorkersStatusPage() {
               <ResponsiveTable
                 columns={approvedColumns}
                 data={filteredWorkers}
+                fitWidth
+                actionsWidth="14%"
                 actions={(row: Worker) => (
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap items-center gap-1">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -568,7 +578,7 @@ export default function WorkersStatusPage() {
                       variant="outline"
                       size="sm"
                       className="h-8 px-2 text-orange-600 border-orange-300 hover:bg-orange-50 hover:text-orange-700"
-                      onClick={() => handleExit(row.id)}
+                      onClick={() => setExitTarget(row)}
                       title="Exit Worker"
                     >
                       <LogOut className="w-3.5 h-3.5 mr-1" />
@@ -593,8 +603,10 @@ export default function WorkersStatusPage() {
               <ResponsiveTable
                 columns={exitColumns}
                 data={filteredWorkers}
+                fitWidth
+                actionsWidth="12%"
                 actions={(row: Worker) => (
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap items-center gap-1">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -607,7 +619,7 @@ export default function WorkersStatusPage() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-8 px-2 mx-2 text-green-600 hover:text-green-700 hover:bg-green-50"
+                      className="h-8 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
                       onClick={() => handleRetain(row.id)}
                       title="Retain Worker"
                     >
@@ -633,8 +645,10 @@ export default function WorkersStatusPage() {
               <ResponsiveTable
                 columns={rejectedColumns}
                 data={filteredWorkers}
+                fitWidth
+                actionsWidth="8%"
                 actions={(row: Worker) => (
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap items-center gap-1">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -671,7 +685,7 @@ export default function WorkersStatusPage() {
                 {selectedWorker.status === "rejected"
                   ? "This worker application was rejected by HR. View details and rejection reason below."
                   : selectedWorker.status === "exit"
-                    ? `This worker has exited. Last working day: ${selectedWorker.lwd || "N/A"}`
+                    ? `This worker has exited. Resigned date: ${selectedWorker.resigned_date || "N/A"}`
                     : "Complete worker information and current status."
                 }
               </DialogDescription>
@@ -682,7 +696,7 @@ export default function WorkersStatusPage() {
               {selectedWorker.status === "exit" && (
                 <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-lg">
                   <h3 className="text-lg font-semibold text-orange-600 mb-2">Worker Exited</h3>
-                  <p className="text-sm text-muted-foreground">Last Working Day: {selectedWorker.lwd || "N/A"}</p>
+                  <p className="text-sm text-muted-foreground">Resigned Date: {selectedWorker.resigned_date || "N/A"}</p>
                 </div>
               )}
 
@@ -898,6 +912,12 @@ export default function WorkersStatusPage() {
           </DialogContent>
         </Dialog>
       )}
+
+      <ExitWorkerDialog
+        worker={exitTarget}
+        onCancel={() => setExitTarget(null)}
+        onConfirm={handleExitConfirm}
+      />
     </div>
   )
 }

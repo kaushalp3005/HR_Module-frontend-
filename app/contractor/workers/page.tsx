@@ -4,12 +4,13 @@ import Link from "next/link"
 import { toast } from "sonner"
 
 import { useAppStore } from "@/lib/store"
-import { getWorkers, deleteWorker as deleteWorkerAPI } from "@/lib/api"
+import { getWorkers, deleteWorker as deleteWorkerAPI, exitWorker as exitWorkerAPI } from "@/lib/api"
 import { ResponsivePageHeader } from "@/components/responsive-page-header"
 import { ResponsiveTable } from "@/components/responsive-table"
+import { ExitWorkerDialog, type ExitWorkerTarget } from "@/components/exit-worker-dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Eye, Edit2, Trash2, Plus, Upload } from "lucide-react"
+import { Eye, Edit2, Trash2, Plus, Upload, LogOut } from "lucide-react"
 
 interface Worker {
   id: string  // Changed to string to match ResponsiveTable requirements
@@ -37,6 +38,7 @@ export default function ContractorWorkersPage() {
   const [workers, setWorkers] = useState<Worker[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedWarehouse, setSelectedWarehouse] = useState("all")
+  const [exitTarget, setExitTarget] = useState<ExitWorkerTarget | null>(null)
 
   // Fetch workers from API
   useEffect(() => {
@@ -74,6 +76,18 @@ export default function ContractorWorkersPage() {
         console.error("Failed to delete worker:", error)
         toast.error("Failed to delete worker")
       }
+    }
+  }
+
+  const handleExitConfirm = async (id: string, resignedDate: string) => {
+    try {
+      await exitWorkerAPI(Number(id), resignedDate)
+      setWorkers(workers.map((w) => (w.id === id ? { ...w, status: "exit" } : w)))
+      toast.success("Worker marked as exited successfully")
+      setExitTarget(null)
+    } catch (error) {
+      console.error("Failed to exit worker:", error)
+      toast.error(error instanceof Error ? error.message : "Failed to exit worker")
     }
   }
 
@@ -208,20 +222,39 @@ export default function ContractorWorkersPage() {
                       <Edit2 className="w-4 h-4" />
                     </Link>
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                    onClick={() => handleDelete(row.id)}
-                    title="Delete Worker"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  {row.status === "approved" ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-2 text-orange-600 border-orange-300 hover:bg-orange-50 hover:text-orange-700"
+                      onClick={() => setExitTarget(row)}
+                      title="Exit Worker"
+                    >
+                      <LogOut className="w-3.5 h-3.5 mr-1" />
+                      <span className="text-xs">Exit</span>
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                      onClick={() => handleDelete(row.id)}
+                      title="Delete Worker"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
             )}
           />
         )}
       </div>
+
+      <ExitWorkerDialog
+        worker={exitTarget}
+        onCancel={() => setExitTarget(null)}
+        onConfirm={handleExitConfirm}
+      />
     </div>
   )
 }

@@ -24,7 +24,7 @@ type Worker = {
   phone: string
   work_location: string
   date_of_joining: string
-  lwd?: string
+  resigned_date?: string
 }
 
 const WAREHOUSES = [
@@ -182,8 +182,8 @@ export default function WorkersPage() {
       render: (value: string) => <span className="text-xs sm:text-sm">{value || "N/A"}</span>,
     },
     {
-      key: "lwd" as const,
-      label: "Last Working Day",
+      key: "resigned_date" as const,
+      label: "Resigned Date",
       render: (value: string) => <span className="text-xs sm:text-sm">{value || "N/A"}</span>,
     },
     {
@@ -349,7 +349,7 @@ export default function WorkersPage() {
               {selectedWorker.status === "exit" && (
                 <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-lg">
                   <h3 className="text-lg font-semibold text-orange-600 mb-2">Worker Exited</h3>
-                  <p className="text-sm text-muted-foreground">Last Working Day: {selectedWorker.lwd || "N/A"}</p>
+                  <p className="text-sm text-muted-foreground">Resigned Date: {selectedWorker.resigned_date || "N/A"}</p>
                 </div>
               )}
 
@@ -396,7 +396,7 @@ export default function WorkersPage() {
                         <LogOut className="w-4 h-4" />
                         Last Working Day
                       </div>
-                      <div className="font-medium text-orange-600">{selectedWorker.lwd || "N/A"}</div>
+                      <div className="font-medium text-orange-600">{selectedWorker.resigned_date || "N/A"}</div>
                     </div>
                   )}
                 </div>

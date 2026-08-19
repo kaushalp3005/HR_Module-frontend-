@@ -144,32 +144,6 @@ export default function LoginPage() {
               </Button>
             </form>
           </Form>
-
-          <div className="mt-6 sm:mt-8 p-3 sm:p-4 bg-muted rounded-lg">
-            <p className="text-xs sm:text-sm text-muted-foreground font-medium mb-2">Test Credentials:</p>
-            <div className="space-y-2 text-xs sm:text-sm text-muted-foreground">
-              <div>
-                <p className="font-semibold">HR Manager:</p>
-                <p>Email: ashwin@candorfoods.in</p>
-                <p>Password: ashwinbagul</p>
-              </div>
-              <div className="pt-2">
-                <p className="font-semibold">Contractors:</p>
-                <div className="ml-2 space-y-1">
-                  <div>
-                    <p>MuFi Enterprises:</p>
-                    <p className="ml-2">Email: alsakhienterprises27@gmail.com</p>
-                    <p className="ml-2">Password: muf2025</p>
-                  </div>
-                  <div>
-                    <p>Samir Enterprises:</p>
-                    <p className="ml-2">Email: alsakhienterprises27@gmail.com</p>
-                    <p className="ml-2">Password: samir2025</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>

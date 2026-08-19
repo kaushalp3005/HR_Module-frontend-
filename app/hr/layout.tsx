@@ -16,6 +16,7 @@ const navItems = [
   { href: "/hr/contractors", label: "Contractors", showBadge: false },
   { href: "/hr/workers", label: "Total Workers", showBadge: false },
   { href: "/hr/approvals", label: "Approvals", showBadge: true },
+  { href: "/hr/attendance", label: "Attendance", showBadge: false },
 ]
 
 export default function HRLayout({
