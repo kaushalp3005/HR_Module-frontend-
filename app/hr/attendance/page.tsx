@@ -5,7 +5,7 @@ import { API_BASE_URL } from "@/lib/api"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, UserCheck, UserX, RefreshCw, Download, Wifi } from "lucide-react"
+import { Users, UserCheck, UserX, RefreshCw, Download } from "lucide-react"
 
 interface AttendanceRecord {
   emp_id: string
@@ -52,8 +52,6 @@ export default function AttendancePage() {
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([])
   const [allWorkers, setAllWorkers] = useState<Worker[]>([])
   const [loading, setLoading] = useState(false)
-  const [syncing, setSyncing] = useState(false)
-  const [syncResult, setSyncResult] = useState<string>("")
   const [lastRefreshed, setLastRefreshed] = useState<string>("")
 
   // Filter state
@@ -84,6 +82,14 @@ export default function AttendancePage() {
 
   useEffect(() => {
     fetchData(dateFilter)
+  }, [dateFilter])
+
+  // Live view: punches arrive from the device within ~10s, so keep today's
+  // figures current without the user having to press Refresh.
+  useEffect(() => {
+    if (dateFilter !== today()) return
+    const id = setInterval(() => fetchData(dateFilter), 30_000)
+    return () => clearInterval(id)
   }, [dateFilter])
 
   // Build full list: present workers + absent workers
@@ -145,25 +151,6 @@ export default function AttendancePage() {
   const presentCount = filtered.filter((r) => r.status === "Present").length
   const absentCount = filtered.filter((r) => r.status === "Not Present").length
 
-  const syncFromDevice = async () => {
-    setSyncing(true)
-    setSyncResult("")
-    try {
-      const res = await fetch(`${API_BASE_URL}/attendance/sync-from-device`, { method: "POST" })
-      const data = await res.json()
-      if (res.ok) {
-        setSyncResult(`✓ Synced ${data.saved} records from device`)
-        await fetchData(dateFilter)
-      } else {
-        setSyncResult(`✗ ${data.detail}`)
-      }
-    } catch {
-      setSyncResult("✗ Could not reach device")
-    } finally {
-      setSyncing(false)
-    }
-  }
-
   const exportCSV = () => {
     const headers = ["Emp Code", "Name", "Contractor", "Department", "Designation", "Check In", "Check Out", "Hours Worked", "Status"]
     const rows = filtered.map((r) => [
@@ -197,20 +184,6 @@ export default function AttendancePage() {
             {lastRefreshed && (
               <span className="text-xs text-white/70">Last updated: {lastRefreshed}</span>
             )}
-            {syncResult && (
-              <span className={`text-xs font-medium ${syncResult.startsWith("✓") ? "text-emerald-300" : "text-red-300"}`}>
-                {syncResult}
-              </span>
-            )}
-            <Button
-              variant="secondary"
-              className="bg-emerald-500 text-white hover:bg-emerald-600 shadow-md"
-              onClick={syncFromDevice}
-              disabled={syncing}
-            >
-              <Wifi className={`mr-2 h-4 w-4 ${syncing ? "animate-pulse" : ""}`} />
-              {syncing ? "Syncing…" : "Sync from Device"}
-            </Button>
             <Button
               variant="secondary"
               className="bg-white text-[#3a8bfd] shadow-md hover:bg-slate-100"

@@ -8,9 +8,10 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Eye, Edit2, Trash2, User, Phone, MapPin, Calendar, Briefcase, Building, Hash, Search, LogOut } from "lucide-react"
+import { Eye, Edit2, Trash2, User, Phone, MapPin, Calendar, Briefcase, Building, Hash, Search, LogOut, Download } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
+import * as XLSX from "xlsx"
 
 type Worker = {
   id: string
@@ -25,6 +26,20 @@ type Worker = {
   work_location: string
   date_of_joining: string
   resigned_date?: string
+  email?: string
+  gender?: string
+  date_of_birth?: string
+  floor?: string
+  aadhaar?: string
+  pan?: string
+  uan_number?: string
+  esi_number?: string
+  address?: string
+  permanent_address?: string
+  bank_name?: string
+  bank_ac?: string
+  ifsc_code?: string
+  emergency_contact_number?: string
 }
 
 const WAREHOUSES = [
@@ -197,6 +212,44 @@ export default function WorkersPage() {
     },
   ]
 
+  const handleDownloadExcel = () => {
+    const dataToExport = filteredWorkers.map((worker) => ({
+      "Emp ID": worker.emp_id || "N/A",
+      "Name": worker.name,
+      "Phone": worker.phone,
+      "Email": worker.email || "N/A",
+      "Gender": worker.gender || "N/A",
+      "Date of Birth": worker.date_of_birth || "N/A",
+      "Designation": worker.designation,
+      "Department": worker.department || "N/A",
+      "Work Location": worker.work_location || "N/A",
+      "Floor": worker.floor || "N/A",
+      "Date of Joining": worker.date_of_joining || "N/A",
+      "Contractor Name": worker.contractor_name || "N/A",
+      "Aadhaar": worker.aadhaar || "N/A",
+      "PAN": worker.pan || "N/A",
+      "UAN Number": worker.uan_number || "N/A",
+      "ESI Number": worker.esi_number || "N/A",
+      "Bank Name": worker.bank_name || "N/A",
+      "Bank A/C": worker.bank_ac || "N/A",
+      "IFSC Code": worker.ifsc_code || "N/A",
+      "Emergency Contact": worker.emergency_contact_number || "N/A",
+      "Address": worker.address || "N/A",
+      "Permanent Address": worker.permanent_address || "N/A",
+      "Status": worker.status,
+      ...(worker.status === "exit" ? { "Resigned Date": worker.resigned_date || "N/A" } : {}),
+    }))
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport)
+    const workbook = XLSX.utils.book_new()
+    const sheetName = activeTab === "approved" ? "Active Workers" : "Exited Workers"
+    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName)
+
+    const fileName = `workers_${activeTab}_${selectedWarehouse === "all" ? "all_locations" : selectedWarehouse}_${new Date().toISOString().split("T")[0]}.xlsx`
+    XLSX.writeFile(workbook, fileName)
+    toast.success(`Downloaded ${dataToExport.length} workers data`)
+  }
+
   const getStatusForTab = (tab: string) => {
     return tab === "approved" ? "approved" : "exit"
   }
@@ -248,15 +301,26 @@ export default function WorkersPage() {
           })}
         </div>
 
-        {/* Search Bar */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by name, emp ID, or phone number..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
+        {/* Search Bar + Export */}
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by name, emp ID, or phone number..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Button
+            onClick={handleDownloadExcel}
+            className="gap-2 text-xs sm:text-sm"
+            variant="outline"
+            disabled={filteredWorkers.length === 0}
+          >
+            <Download className="w-4 h-4" />
+            <span>Download Excel</span>
+          </Button>
         </div>
 
         <TabsContent value="approved" className="mt-0">
