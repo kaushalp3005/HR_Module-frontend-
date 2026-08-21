@@ -153,6 +153,9 @@ const floorOptions = [
   "SEASONING",
   "PRINTING",
   "CHOCOLATE",
+  "DMART",
+  "MAJOR LINE",
+  "PACKAGING",
   "OTHER",
 ]
 

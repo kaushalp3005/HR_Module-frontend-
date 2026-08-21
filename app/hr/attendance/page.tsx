@@ -6,6 +6,9 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Users, UserCheck, UserX, RefreshCw, Download } from "lucide-react"
+import { toast } from "sonner"
+import * as XLSX from "xlsx"
+import { AttendanceExportDialog } from "@/components/attendance-export-dialog"
 
 interface AttendanceRecord {
   emp_id: string
@@ -59,6 +62,7 @@ export default function AttendancePage() {
   const [filterDepartment, setFilterDepartment] = useState("All")
   const [filterDirection, setFilterDirection] = useState("All")
   const [filterStatus, setFilterStatus] = useState("All")
+  const [exportOpen, setExportOpen] = useState(false)
 
   const fetchData = async (date: string) => {
     setLoading(true)
@@ -151,20 +155,83 @@ export default function AttendancePage() {
   const presentCount = filtered.filter((r) => r.status === "Present").length
   const absentCount = filtered.filter((r) => r.status === "Not Present").length
 
-  const exportCSV = () => {
-    const headers = ["Emp Code", "Name", "Contractor", "Department", "Designation", "Check In", "Check Out", "Hours Worked", "Status"]
-    const rows = filtered.map((r) => [
-      r.emp_id, r.worker_name, r.contractor_name, r.department, r.designation,
-      r.check_in ?? "", r.check_out ?? "", r.hours_worked ?? "", r.status,
-    ])
-    const csv = [headers, ...rows].map((r) => r.join(",")).join("\n")
-    const blob = new Blob([csv], { type: "text/csv" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `attendance_${dateFilter}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+  // Builds the full register: every active worker on every date in the range,
+  // with the days they did not punch marked Absent.
+  const handleRangeExport = async (fromDate: string, toDate: string) => {
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/attendance/range?from_date=${fromDate}&to_date=${toDate}`
+      )
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.detail || "Failed to fetch attendance for that range")
+      }
+      const data: { records: AttendanceRecord[] } = await res.json()
+
+      // Index punches by "empId|date" for O(1) lookup while walking the register
+      const byKey = new Map(data.records.map((r) => [`${r.emp_id}|${r.date}`, r]))
+
+      const dates: string[] = []
+      for (let d = new Date(fromDate); d <= new Date(toDate); d.setDate(d.getDate() + 1)) {
+        dates.push(d.toISOString().split("T")[0])
+      }
+
+      // Anyone who punched during the range but is no longer in the active list
+      // (exited since, or a device ID with no worker record) still belongs in
+      // the register - they worked those days.
+      const activeIds = new Set(allWorkers.map((w) => w.emp_id))
+      const extraWorkers = new Map<string, typeof allWorkers[number]>()
+      for (const r of data.records) {
+        if (activeIds.has(r.emp_id) || extraWorkers.has(r.emp_id)) continue
+        extraWorkers.set(r.emp_id, {
+          emp_id: r.emp_id,
+          name: r.worker_name,
+          contractor_name: r.contractor_name ?? "—",
+          department: null,
+          designation: r.designation ?? "—",
+          status: "inactive",
+        })
+      }
+      const registerWorkers = [...allWorkers, ...extraWorkers.values()]
+
+      const rows = dates.flatMap((date) =>
+        registerWorkers.map((w) => {
+          const rec = byKey.get(`${w.emp_id}|${date}`)
+          return {
+            "Date": date,
+            "Emp Code": w.emp_id || "—",
+            "Name": w.name,
+            "Contractor": w.contractor_name || "—",
+            "Department": w.department || "—",
+            "Designation": w.designation || "—",
+            "Check In": rec?.check_in ?? "—",
+            "Check Out": rec?.check_out ?? "—",
+            "Total Punches": rec?.total_punches ?? 0,
+            "Hours Worked": rec?.hours_worked ?? "—",
+            "Status": rec ? "Present" : "Absent",
+          }
+        })
+      )
+
+      if (rows.length === 0) {
+        toast.error("Nothing to export", { description: "No active workers found." })
+        return
+      }
+
+      const worksheet = XLSX.utils.json_to_sheet(rows)
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance")
+      XLSX.writeFile(workbook, `attendance_${fromDate}_to_${toDate}.xlsx`)
+
+      const present = rows.filter((r) => r.Status === "Present").length
+      toast.success(`Downloaded ${rows.length.toLocaleString()} rows`, {
+        description: `${dates.length} days · ${present.toLocaleString()} present · ${(rows.length - present).toLocaleString()} absent`,
+      })
+      setExportOpen(false)
+    } catch (error) {
+      console.error("Attendance export failed:", error)
+      toast.error(error instanceof Error ? error.message : "Failed to export attendance")
+    }
   }
 
   return (
@@ -196,10 +263,10 @@ export default function AttendancePage() {
             <Button
               variant="secondary"
               className="bg-white/20 text-white hover:bg-white/30"
-              onClick={exportCSV}
+              onClick={() => setExportOpen(true)}
             >
               <Download className="mr-2 h-4 w-4" />
-              Export CSV
+              Export Excel
             </Button>
           </div>
         </div>
@@ -379,6 +446,13 @@ export default function AttendancePage() {
           </div>
         </CardContent>
       </Card>
+
+      <AttendanceExportDialog
+        open={exportOpen}
+        onOpenChange={setExportOpen}
+        workerCount={allWorkers.length}
+        onExport={handleRangeExport}
+      />
     </div>
   )
 }
