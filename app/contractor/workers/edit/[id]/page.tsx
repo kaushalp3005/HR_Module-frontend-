@@ -26,6 +26,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Select,
   SelectContent,
@@ -49,7 +50,11 @@ type EditWorkerFormValues = {
   floor: string
   floorOther: string
   contactNumber: string
+  email: string
   emergencyContactNumber: string
+  emrcyPNm: string
+  resp: string
+  emrcyConNo: string
   dateOfBirth: string
   uanNumber: string
   esiNumber: string
@@ -59,6 +64,15 @@ type EditWorkerFormValues = {
   currentlyStayingType: "permanent" | "rental" | ""
   permanentAddress: string
   rentalAddress: string
+  pinCode: string
+  bankName: string
+  bankAc: string
+  ifscCode: string
+  aprnSize: string
+  apronLockerNo: string
+  ftwrSize: string
+  mdcl: string
+  remark: string
   passportPhoto: File | null
   aadharCard: File | null
   panCard: File | null
@@ -79,7 +93,11 @@ const defaultValues: EditWorkerFormValues = {
   floor: "",
   floorOther: "",
   contactNumber: "",
+  email: "",
   emergencyContactNumber: "",
+  emrcyPNm: "",
+  resp: "",
+  emrcyConNo: "",
   dateOfBirth: "",
   uanNumber: "",
   esiNumber: "",
@@ -89,6 +107,15 @@ const defaultValues: EditWorkerFormValues = {
   currentlyStayingType: "",
   permanentAddress: "",
   rentalAddress: "",
+  pinCode: "",
+  bankName: "",
+  bankAc: "",
+  ifscCode: "",
+  aprnSize: "",
+  apronLockerNo: "",
+  ftwrSize: "",
+  mdcl: "",
+  remark: "",
   passportPhoto: null,
   aadharCard: null,
   panCard: null,
@@ -96,7 +123,7 @@ const defaultValues: EditWorkerFormValues = {
 
 const titleOptions = ["MR", "MRS", "MS", "DR"]
 const genderOptions = ["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"]
-const designationOptions = ["LINE WORKER", "SUPERVISOR", "TEAM LEADER", "MACHINE OPERATOR", "TECHNICIAN", "PRINTING", "OTHER"]
+const designationOptions = ["LINE WORKER", "SUPERVISOR", "TEAM LEADER", "MACHINE OPERATOR", "TECHNICIAN", "PRINTING", "HOUSEKEEPING", "OTHER"]
 const departmentOptions = ["Production", "Seasoning", "Service Floor", "Printing", "CHOCOLATE", "OTHER"]
 const locationOptions = ["A-68-Mahape", "A-101-Koparkhairne", "W-202-Koparkhairne", "A-185-Koparkhairne", "F-53-APMC", "OTHER"]
 const floorOptions = [
@@ -172,6 +199,19 @@ export default function EditWorkerPage() {
         form.setValue("currentlyStayingType", data.currently_staying_type || "")
         form.setValue("permanentAddress", data.permanent_address || "")
         form.setValue("rentalAddress", data.rental_address || "")
+        form.setValue("email", data.email || "")
+        form.setValue("emrcyPNm", data.emrcy_p_nm || "")
+        form.setValue("resp", data.resp || "")
+        form.setValue("emrcyConNo", data.emrcy_con_no || "")
+        form.setValue("pinCode", data.pin_code || "")
+        form.setValue("bankName", data.bank_name || "")
+        form.setValue("bankAc", data.bank_ac || "")
+        form.setValue("ifscCode", data.ifsc_code || "")
+        form.setValue("aprnSize", data.aprn_size || "")
+        form.setValue("apronLockerNo", data.apron_locker_no || "")
+        form.setValue("ftwrSize", data.ftwr_size || "")
+        form.setValue("mdcl", data.mdcl || "")
+        form.setValue("remark", data.remark || "")
         
         setIsLoading(false)
         toast.success("Worker Data Loaded", {
@@ -263,8 +303,11 @@ export default function EditWorkerPage() {
         
         // Contact Information
         phone: values.contactNumber,
-        email: values.contactNumber + "@temp.com",
+        email: values.email || undefined,
         emergency_contact_number: values.emergencyContactNumber || undefined,
+        emrcy_p_nm: values.emrcyPNm || undefined,
+        resp: values.resp || undefined,
+        emrcy_con_no: values.emrcyConNo || undefined,
         
         // Work Information
         designation: values.designation,
@@ -287,6 +330,19 @@ export default function EditWorkerPage() {
         currently_staying_type: values.currentlyStayingType || undefined,
         permanent_address: values.permanentAddress || undefined,
         rental_address: values.rentalAddress || undefined,
+        pin_code: values.pinCode || undefined,
+
+        // Banking Information
+        bank_name: values.bankName || undefined,
+        bank_ac: values.bankAc || undefined,
+        ifsc_code: values.ifscCode || undefined,
+
+        // Additional Information
+        aprn_size: values.aprnSize || undefined,
+        apron_locker_no: values.apronLockerNo || undefined,
+        ftwr_size: values.ftwrSize || undefined,
+        mdcl: values.mdcl || undefined,
+        remark: values.remark || undefined,
         
         // Document Uploads (only if new files selected)
         passport_photo: values.passportPhoto || undefined,
@@ -356,17 +412,25 @@ export default function EditWorkerPage() {
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(onSubmit)}
-              className="space-y-6"
+              className="space-y-8"
             >
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {/* Basic Information Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-stone-900 border-b pb-2">Basic Information</h3>
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="empNo"
                   render={({ field }) => (
-                    <FormItem className="md:col-span-1">
-                      <FormLabel>Employee Number</FormLabel>
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">Employee Number</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter employee number" {...field} />
+                        <Input
+                          placeholder="Loading..."
+                          {...field}
+                          readOnly
+                          className="bg-muted/50 cursor-not-allowed border-stone-200"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -379,23 +443,23 @@ export default function EditWorkerPage() {
                   render={({ field }) => (
                     <FormItem className="md:col-span-1">
                       <FormLabel>Title</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <FormControl>
+                      <FormControl>
+                        <Select
+                          value={field.value || undefined}
+                          onValueChange={field.onChange}
+                        >
                           <SelectTrigger>
                             <SelectValue placeholder="Select title" />
                           </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {titleOptions.map((option) => (
-                            <SelectItem key={option} value={option}>
-                              {option}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                          <SelectContent>
+                            {titleOptions.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -406,9 +470,9 @@ export default function EditWorkerPage() {
                   name="workerName"
                   render={({ field }) => (
                     <FormItem className="md:col-span-2">
-                      <FormLabel>Worker Name *</FormLabel>
+                      <FormLabel>Name of the Worker</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter worker name" {...field} />
+                        <Input placeholder="Enter full name" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -419,38 +483,24 @@ export default function EditWorkerPage() {
                   control={form.control}
                   name="gender"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="md:col-span-1">
                       <FormLabel>Gender</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <FormControl>
+                      <FormControl>
+                        <Select
+                          value={field.value || undefined}
+                          onValueChange={field.onChange}
+                        >
                           <SelectTrigger>
                             <SelectValue placeholder="Select gender" />
                           </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {genderOptions.map((option) => (
-                            <SelectItem key={option} value={option}>
-                              {option.replace(/_/g, " ")}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="dateOfBirth"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Date of Birth</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
+                          <SelectContent>
+                            {genderOptions.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option.replaceAll("_", " ")}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -461,7 +511,7 @@ export default function EditWorkerPage() {
                   control={form.control}
                   name="dateOfJoining"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="md:col-span-1">
                       <FormLabel>Date of Joining</FormLabel>
                       <FormControl>
                         <Input type="date" {...field} />
@@ -470,30 +520,36 @@ export default function EditWorkerPage() {
                     </FormItem>
                   )}
                 />
+              </div>
+              </div>
 
+              {/* Work Information Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-stone-900 border-b pb-2">Work Information</h3>
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="designation"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Designation *</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <FormControl>
+                    <FormItem className="md:col-span-1">
+                      <FormLabel>Designation <span className="text-red-500">*</span></FormLabel>
+                      <FormControl>
+                        <Select
+                          value={field.value || undefined}
+                          onValueChange={field.onChange}
+                        >
                           <SelectTrigger>
                             <SelectValue placeholder="Select designation" />
                           </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {designationOptions.map((option) => (
-                            <SelectItem key={option} value={option}>
-                              {option}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                          <SelectContent>
+                            {designationOptions.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -504,7 +560,7 @@ export default function EditWorkerPage() {
                     control={form.control}
                     name="designationOther"
                     render={({ field }) => (
-                      <FormItem>
+                      <FormItem className="md:col-span-1">
                         <FormLabel>Please specify designation</FormLabel>
                         <FormControl>
                           <Input
@@ -522,25 +578,25 @@ export default function EditWorkerPage() {
                   control={form.control}
                   name="department"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Department</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <FormControl>
+                    <FormItem className="md:col-span-1">
+                      <FormLabel>Department <span className="text-red-500">*</span></FormLabel>
+                      <FormControl>
+                        <Select
+                          value={field.value || undefined}
+                          onValueChange={field.onChange}
+                        >
                           <SelectTrigger>
                             <SelectValue placeholder="Select department" />
                           </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {departmentOptions.map((option) => (
-                            <SelectItem key={option} value={option}>
-                              {option}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                          <SelectContent>
+                            {departmentOptions.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -551,13 +607,10 @@ export default function EditWorkerPage() {
                     control={form.control}
                     name="departmentOther"
                     render={({ field }) => (
-                      <FormItem className="md:col-span-2">
-                        <FormLabel>Please specify department</FormLabel>
+                      <FormItem className="md:col-span-1">
+                        <FormLabel>Specify Department</FormLabel>
                         <FormControl>
-                          <Input
-                            placeholder="Enter department name"
-                            {...field}
-                          />
+                          <Input placeholder="Enter department name" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -569,25 +622,25 @@ export default function EditWorkerPage() {
                   control={form.control}
                   name="workLocation"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Work Location</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <FormControl>
+                    <FormItem className="md:col-span-1">
+                      <FormLabel>Work Location <span className="text-red-500">*</span></FormLabel>
+                      <FormControl>
+                        <Select
+                          value={field.value || undefined}
+                          onValueChange={field.onChange}
+                        >
                           <SelectTrigger>
                             <SelectValue placeholder="Select location" />
                           </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {locationOptions.map((option) => (
-                            <SelectItem key={option} value={option}>
-                              {option}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                          <SelectContent>
+                            {locationOptions.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -598,13 +651,10 @@ export default function EditWorkerPage() {
                     control={form.control}
                     name="workLocationOther"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Please specify location</FormLabel>
+                      <FormItem className="md:col-span-1">
+                        <FormLabel>Specify Work Location</FormLabel>
                         <FormControl>
-                          <Input
-                            placeholder="Enter work location"
-                            {...field}
-                          />
+                          <Input placeholder="Enter work location" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -616,25 +666,25 @@ export default function EditWorkerPage() {
                   control={form.control}
                   name="floor"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Floor</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <FormControl>
+                    <FormItem className="md:col-span-1">
+                      <FormLabel>Floor <span className="text-red-500">*</span></FormLabel>
+                      <FormControl>
+                        <Select
+                          value={field.value || undefined}
+                          onValueChange={field.onChange}
+                        >
                           <SelectTrigger>
                             <SelectValue placeholder="Select floor" />
                           </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {floorOptions.map((option) => (
-                            <SelectItem key={option} value={option}>
-                              {option}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                          <SelectContent>
+                            {floorOptions.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -645,28 +695,45 @@ export default function EditWorkerPage() {
                     control={form.control}
                     name="floorOther"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Please specify floor</FormLabel>
+                      <FormItem className="md:col-span-1">
+                        <FormLabel>Specify Floor</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter floor" {...field} />
+                          <Input placeholder="Enter floor name" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 )}
+              </div>
+              </div>
 
+              {/* Contact Information Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-stone-900 border-b pb-2">Contact Information</h3>
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="contactNumber"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Contact Number *</FormLabel>
+                    <FormItem className="md:col-span-1">
+                      <FormLabel>Contact Number <span className="text-red-500">*</span></FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="Enter 10 digit number"
-                          {...field}
-                        />
+                        <Input placeholder="Enter primary contact number" type="tel" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-1">
+                      <FormLabel>Email (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter email address" type="email" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -677,13 +744,72 @@ export default function EditWorkerPage() {
                   control={form.control}
                   name="emergencyContactNumber"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Emergency Contact Number</FormLabel>
+                    <FormItem className="md:col-span-1">
+                      <FormLabel>Emergency Contact Number <span className="text-red-500">*</span></FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="Enter emergency contact"
-                          {...field}
-                        />
+                        <Input placeholder="Enter emergency contact number" type="tel" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="emrcyPNm"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-1">
+                      <FormLabel>Emergency Person Name (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter emergency person name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="resp"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-1">
+                      <FormLabel>Relationship (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., Father, Spouse, Brother" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="emrcyConNo"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-1">
+                      <FormLabel>Additional Emergency Contact (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter additional contact" type="tel" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              </div>
+
+              {/* Personal & Government IDs Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-stone-900 border-b pb-2">Personal & Government IDs</h3>
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="dateOfBirth"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-1">
+                      <FormLabel>Date of Birth <span className="text-red-500">*</span></FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -694,8 +820,8 @@ export default function EditWorkerPage() {
                   control={form.control}
                   name="uanNumber"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>UAN Number</FormLabel>
+                    <FormItem className="md:col-span-1">
+                      <FormLabel>UAN Number <span className="text-red-500">*</span></FormLabel>
                       <FormControl>
                         <Input placeholder="Enter UAN number" {...field} />
                       </FormControl>
@@ -708,8 +834,8 @@ export default function EditWorkerPage() {
                   control={form.control}
                   name="esiNumber"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>ESI Number</FormLabel>
+                    <FormItem className="md:col-span-1">
+                      <FormLabel>ESI Number <span className="text-red-500">*</span></FormLabel>
                       <FormControl>
                         <Input placeholder="Enter ESI number" {...field} />
                       </FormControl>
@@ -722,13 +848,10 @@ export default function EditWorkerPage() {
                   control={form.control}
                   name="aadharNumber"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Aadhaar Number *</FormLabel>
+                    <FormItem className="md:col-span-1">
+                      <FormLabel>Aadhar Number <span className="text-red-500">*</span></FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="Enter 12 digit Aadhaar"
-                          {...field}
-                        />
+                        <Input placeholder="Enter Aadhar number" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -739,11 +862,71 @@ export default function EditWorkerPage() {
                   control={form.control}
                   name="panNumber"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="md:col-span-1">
                       <FormLabel>PAN Number</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="Enter PAN (e.g., ABCDE1234F)"
+                        <Input placeholder="Enter PAN number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              </div>
+
+              {/* Address Information Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-stone-900 border-b pb-2">Address Information</h3>
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                {/* Currently Staying Type */}
+                <div className="md:col-span-2">
+                  <FormField
+                    control={form.control}
+                    name="currentlyStayingType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Currently Staying <span className="text-red-500">*</span></FormLabel>
+                        <FormControl>
+                          <div className="flex gap-6">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                value="permanent"
+                                checked={field.value === "permanent"}
+                                onChange={() => field.onChange("permanent")}
+                                className="h-4 w-4 text-orange-600 focus:ring-orange-500"
+                              />
+                              <span className="text-sm text-stone-700">Permanent Address</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                value="rental"
+                                checked={field.value === "rental"}
+                                onChange={() => field.onChange("rental")}
+                                className="h-4 w-4 text-orange-600 focus:ring-orange-500"
+                              />
+                              <span className="text-sm text-stone-700">Rental Address</span>
+                            </label>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {/* Permanent Address */}
+                <FormField
+                  control={form.control}
+                  name="permanentAddress"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                      <FormLabel>Permanent Address <span className="text-red-500">*</span></FormLabel>
+                      <FormControl>
+                        <textarea
+                          placeholder="Enter permanent address"
+                          className="border-input focus-visible:border-ring focus-visible:ring-ring/50 min-h-[100px] w-full resize-y rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
                           {...field}
                         />
                       </FormControl>
@@ -752,50 +935,7 @@ export default function EditWorkerPage() {
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="currentlyStayingType"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <FormLabel>Currently Staying Type</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select staying type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="permanent">Permanent</SelectItem>
-                          <SelectItem value="rental">Rental</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {currentlyStayingType === "permanent" && (
-                  <FormField
-                    control={form.control}
-                    name="permanentAddress"
-                    render={({ field }) => (
-                      <FormItem className="md:col-span-2">
-                        <FormLabel>Permanent Address</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Enter permanent address"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-
+                {/* Rental Address - Only show if rental type is selected */}
                 {currentlyStayingType === "rental" && (
                   <FormField
                     control={form.control}
@@ -804,8 +944,9 @@ export default function EditWorkerPage() {
                       <FormItem className="md:col-span-2">
                         <FormLabel>Rental Address</FormLabel>
                         <FormControl>
-                          <Input
+                          <textarea
                             placeholder="Enter rental address"
+                            className="border-input focus-visible:border-ring focus-visible:ring-ring/50 min-h-[100px] w-full resize-y rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
                             {...field}
                           />
                         </FormControl>
@@ -814,11 +955,165 @@ export default function EditWorkerPage() {
                     )}
                   />
                 )}
+
+                <FormField
+                  control={form.control}
+                  name="address"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                      <FormLabel>Address (Optional)</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Enter address" className="resize-none" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="pinCode"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-1">
+                      <FormLabel>PIN Code (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter PIN code" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              </div>
+
+              {/* Banking Information Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-stone-900 border-b pb-2">Banking Information (Optional)</h3>
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="bankName"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-1">
+                      <FormLabel>Bank Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter bank name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="bankAc"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-1">
+                      <FormLabel>Bank Account Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter account number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="ifscCode"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-1">
+                      <FormLabel>IFSC Code</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter IFSC code" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              </div>
+
+              {/* Additional Information Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-stone-900 border-b pb-2">Additional Information (Optional)</h3>
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="aprnSize"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-1">
+                      <FormLabel>Apron Size</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., S, M, L, XL" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="apronLockerNo"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-1">
+                      <FormLabel>Apron Locker No.</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., 101" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="ftwrSize"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-1">
+                      <FormLabel>Footwear Size</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., 7, 8, 9" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="mdcl"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-1">
+                      <FormLabel>Medical Status</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter medical status" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="remark"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-1">
+                      <FormLabel>Remarks</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter any remarks" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               </div>
 
               {/* Document Upload Section */}
-              <div className="space-y-4 border-t pt-6">
-                <h3 className="text-lg font-semibold">Documents (Optional - Upload only to replace existing)</h3>
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-stone-900 border-b pb-2">Document Uploads</h3>
+                <p className="text-sm text-stone-500 mb-4">Upload only to replace existing documents (JPG, JPEG, PNG only, max 5MB each)</p>
                 
                 {/* Passport Photo */}
                 <FormField

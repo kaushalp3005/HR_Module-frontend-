@@ -70,9 +70,8 @@ const workerFormSchema = z.object({
     .max(12, "Aadhaar must be 12 digits")
     .regex(/^[0-9]+$/, "Aadhaar must contain only digits"),
   panNumber: z.string()
-    .min(10, "PAN must be 10 characters")
-    .max(10, "PAN must be 10 characters")
-    .regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "Invalid PAN format (e.g., ABCDE1234F)"),
+    .refine(val => val === "" || /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(val), "Invalid PAN format (e.g., ABCDE1234F)")
+    .optional(),
   currentlyStayingType: z.enum(["permanent", "rental"]).refine(val => val, {
     message: "Please select staying type"
   }),
@@ -89,7 +88,7 @@ const workerFormSchema = z.object({
   remark: z.string().optional(),
   passportPhoto: z.any().refine(val => val !== null, "Passport photo is required"),
   aadharCard: z.any().refine(val => val !== null, "Aadhaar card photo is required"),
-  panCard: z.any().refine(val => val !== null, "PAN card photo is required"),
+  panCard: z.any().optional(),
 })
 
 type AddWorkerFormValues = z.infer<typeof workerFormSchema>
@@ -138,7 +137,7 @@ const defaultValues: Partial<AddWorkerFormValues> = {
 
 const titleOptions = ["MR", "MRS", "MS", "DR"]
 const genderOptions = ["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"]
-const designationOptions = ["LINE WORKER", "SUPERVISOR", "TEAM LEADER", "MACHINE OPERATOR", "TECHNICIAN", "PRINTING", "OTHER"]
+const designationOptions = ["LINE WORKER", "SUPERVISOR", "TEAM LEADER", "MACHINE OPERATOR", "TECHNICIAN", "PRINTING", "HOUSEKEEPING", "OTHER"]
 const departmentOptions = ["Production", "Seasoning", "Service Floor", "Printing", "CHOCOLATE", "OTHER"]
 const locationOptions = ["A-68-Mahape", "A-101-Koparkhairne", "W-202-Koparkhairne", "A-185-Koparkhairne", "F-53-APMC", "OTHER"]
 const floorOptions = [
@@ -883,7 +882,7 @@ export default function AddWorkerPage() {
                   name="panNumber"
                   render={({ field }) => (
                     <FormItem className="md:col-span-1">
-                      <FormLabel>PAN Number <span className="text-red-500">*</span></FormLabel>
+                      <FormLabel>PAN Number</FormLabel>
                       <FormControl>
                         <Input placeholder="Enter PAN number" {...field} />
                       </FormControl>
@@ -1220,7 +1219,7 @@ export default function AddWorkerPage() {
                   name="panCard"
                   render={() => (
                     <FormItem className="md:col-span-2">
-                      <FormLabel>PAN Card <span className="text-red-500">*</span></FormLabel>
+                      <FormLabel>PAN Card</FormLabel>
                       <FormControl>
                         <div className="space-y-3">
                           {!panCardPreview ? (
