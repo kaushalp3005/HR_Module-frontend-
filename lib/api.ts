@@ -247,54 +247,37 @@ export async function getWorkerById(workerId: number): Promise<any> {
  */
 export async function updateWorker(workerId: number, payload: Partial<AddWorkerPayload>): Promise<WorkerResponse> {
   const formData = new FormData();
-  
-  // Add all fields that are provided
-  if (payload.emp_id !== undefined) formData.append('emp_id', payload.emp_id);
-  if (payload.title !== undefined) formData.append('title', payload.title);
-  if (payload.name !== undefined) formData.append('name', payload.name);
-  if (payload.gender !== undefined) formData.append('gender', payload.gender);
-  if (payload.date_of_birth !== undefined) formData.append('date_of_birth', payload.date_of_birth);
-  if (payload.date_of_joining !== undefined) formData.append('date_of_joining', payload.date_of_joining);
-  
-  if (payload.phone !== undefined) formData.append('phone', payload.phone);
-  if (payload.email !== undefined) formData.append('email', payload.email);
-  if (payload.emergency_contact_number !== undefined) formData.append('emergency_contact_number', payload.emergency_contact_number);
-  
-  if (payload.designation !== undefined) formData.append('designation', payload.designation);
-  if (payload.designation_other !== undefined) formData.append('designation_other', payload.designation_other);
-  if (payload.department !== undefined) formData.append('department', payload.department);
-  if (payload.department_other !== undefined) formData.append('department_other', payload.department_other);
-  if (payload.work_location !== undefined) formData.append('work_location', payload.work_location);
-  if (payload.work_location_other !== undefined) formData.append('work_location_other', payload.work_location_other);
-  if (payload.floor !== undefined) formData.append('floor', payload.floor);
-  if (payload.floor_other !== undefined) formData.append('floor_other', payload.floor_other);
-  
-  if (payload.aadhaar !== undefined) formData.append('aadhaar', payload.aadhaar);
-  if (payload.pan !== undefined) formData.append('pan', payload.pan);
-  if (payload.uan_number !== undefined) formData.append('uan_number', payload.uan_number);
-  if (payload.esi_number !== undefined) formData.append('esi_number', payload.esi_number);
-  
-  if (payload.address !== undefined) formData.append('address', payload.address);
-  if (payload.currently_staying_type !== undefined) formData.append('currently_staying_type', payload.currently_staying_type);
-  if (payload.permanent_address !== undefined) formData.append('permanent_address', payload.permanent_address);
-  if (payload.rental_address !== undefined) formData.append('rental_address', payload.rental_address);
-  
-  // Add file uploads if provided
-  if (payload.passport_photo) formData.append('passport_photo', payload.passport_photo);
-  if (payload.aadhaar_photo) formData.append('aadhaar_photo', payload.aadhaar_photo);
-  if (payload.pan_photo) formData.append('pan_photo', payload.pan_photo);
-  
+
+  const fileFields = ['passport_photo', 'aadhaar_photo', 'pan_photo'] as const;
+
+  // Append every field the caller provided. This iterates the payload rather
+  // than listing each field by hand: the previous hand-maintained list had
+  // drifted out of sync with AddWorkerPayload and silently dropped 12 fields
+  // (banking, emergency-contact details, apron/footwear, mdcl, remark) while
+  // still reporting success.
+  for (const [key, value] of Object.entries(payload)) {
+    if (value === undefined || value === null) continue;
+    if ((fileFields as readonly string[]).includes(key)) continue;
+    formData.append(key, value as string);
+  }
+
+  // Files are only sent when a replacement was actually selected
+  for (const key of fileFields) {
+    const file = payload[key];
+    if (file) formData.append(key, file);
+  }
+
   try {
     const response = await fetch(`${API_BASE_URL}/workers/${workerId}`, {
       method: 'PUT',
       body: formData,
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.detail || 'Failed to update worker');
     }
-    
+
     return await response.json();
   } catch (error) {
     console.error('Update worker error:', error);
