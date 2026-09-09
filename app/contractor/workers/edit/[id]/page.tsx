@@ -320,7 +320,7 @@ export default function EditWorkerPage() {
         floor_other: values.floorOther || undefined,
         
         // Government IDs
-        aadhaar: values.aadharNumber,
+        aadhaar: values.aadharNumber || undefined,
         pan: values.panNumber || undefined,
         uan_number: values.uanNumber || undefined,
         esi_number: values.esiNumber || undefined,
