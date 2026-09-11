@@ -5,6 +5,7 @@ import { toast } from "sonner"
 
 import { useAppStore } from "@/lib/store"
 import { getWorkers, deleteWorker as deleteWorkerAPI, exitWorker as exitWorkerAPI } from "@/lib/api"
+import { workerContractorId } from "@/lib/contractors"
 import { ResponsivePageHeader } from "@/components/responsive-page-header"
 import { ResponsiveTable } from "@/components/responsive-table"
 import { ExitWorkerDialog, type ExitWorkerTarget } from "@/components/exit-worker-dialog"
@@ -45,7 +46,7 @@ export default function ContractorWorkersPage() {
     const fetchWorkers = async () => {
       try {
         setLoading(true)
-        const data = await getWorkers({ contractor_id: user?.contractorId })
+        const data = await getWorkers({ contractor_id: user?.contractorId && workerContractorId(user.contractorId) })
         
         // Convert id to string for ResponsiveTable compatibility
         const workersWithStringId = data.map((w: any) => ({

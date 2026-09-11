@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { localDateString } from "@/lib/attendance"
 
 // Must match MAX_EXPORT_DAYS in backend/app/routers/attendance_routes.py
 export const MAX_EXPORT_DAYS = 92
@@ -25,7 +26,7 @@ interface AttendanceExportDialogProps {
   onExport: (fromDate: string, toDate: string) => Promise<void>
 }
 
-const today = () => new Date().toISOString().split("T")[0]
+const today = () => localDateString()
 
 const daysBetween = (from: string, to: string) =>
   Math.floor((new Date(to).getTime() - new Date(from).getTime()) / 86_400_000) + 1
@@ -44,8 +45,7 @@ export function AttendanceExportDialog({
   useEffect(() => {
     if (!open) return
     const now = new Date()
-    const first = new Date(now.getFullYear(), now.getMonth(), 1)
-    setFromDate(first.toISOString().split("T")[0])
+    setFromDate(localDateString(new Date(now.getFullYear(), now.getMonth(), 1)))
     setToDate(today())
     setExporting(false)
   }, [open])

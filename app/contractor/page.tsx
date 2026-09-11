@@ -3,6 +3,7 @@ import Link from "next/link"
 import { useMemo, useEffect, useState } from "react"
 import { useAppStore } from "@/lib/store"
 import { getWorkers } from "@/lib/api"
+import { workerContractorId } from "@/lib/contractors"
 import type { ReactNode } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -35,7 +36,7 @@ export default function ContractorDashboard() {
       
       try {
         setLoading(true)
-        const data = await getWorkers({ contractor_id: user.contractorId })
+        const data = await getWorkers({ contractor_id: workerContractorId(user.contractorId) })
         setWorkers(data.map((w: any) => ({ ...w, id: String(w.id) })))
       } catch (error) {
         console.error("Failed to fetch workers:", error)

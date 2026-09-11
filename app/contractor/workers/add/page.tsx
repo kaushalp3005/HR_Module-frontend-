@@ -8,6 +8,7 @@ import { Upload, X, Image as ImageIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useAppStore } from "@/lib/store"
 import { addWorker, getNextEmpId } from "@/lib/api"
+import { workerContractorId, workerContractorName } from "@/lib/contractors"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -183,6 +184,8 @@ export default function AddWorkerPage() {
     const fetchNextEmpId = async () => {
       if (user?.contractorId) {
         try {
+          // The emp-id series is keyed by the login id (c1/c2), unlike the
+          // contractor_id saved on the worker (see lib/contractors.ts)
           const empNo = await getNextEmpId(user.contractorId)
           setNextEmpId(empNo)
           form.setValue("empNo", empNo)
@@ -370,8 +373,8 @@ export default function AddWorkerPage() {
         remark: values.remark || undefined,
         
         // Contractor Information
-        contractor_id: user.contractorId || "unknown",
-        contractor_name: user.name || "Unknown Contractor",
+        contractor_id: user.contractorId ? workerContractorId(user.contractorId) : "unknown",
+        contractor_name: (user.contractorId && workerContractorName(user.contractorId)) || user.name || "Unknown Contractor",
         
         // Document Uploads
         passport_photo: values.passportPhoto,
