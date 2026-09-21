@@ -8,39 +8,14 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Eye, Edit2, Trash2, User, Phone, MapPin, Calendar, Briefcase, Building, Hash, Search, LogOut, Download } from "lucide-react"
+import { Eye, Trash2, User, Search, Download } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
 import * as XLSX from "xlsx"
+import { WorkerDetails } from "@/components/worker-details"
+import { workerToExcelRow, type WorkerRecord } from "@/lib/worker-fields"
 
-type Worker = {
-  id: string
-  emp_id: string
-  name: string
-  designation: string
-  department: string
-  contractor_id: string
-  contractor_name: string
-  status: string
-  phone: string
-  work_location: string
-  date_of_joining: string
-  resigned_date?: string
-  email?: string
-  gender?: string
-  date_of_birth?: string
-  floor?: string
-  aadhaar?: string
-  pan?: string
-  uan_number?: string
-  esi_number?: string
-  address?: string
-  permanent_address?: string
-  bank_name?: string
-  bank_ac?: string
-  ifsc_code?: string
-  emergency_contact_number?: string
-}
+type Worker = WorkerRecord & { id: string }
 
 const WAREHOUSES = [
   { key: "all", label: "All" },
@@ -213,32 +188,7 @@ export default function WorkersPage() {
   ]
 
   const handleDownloadExcel = () => {
-    const dataToExport = filteredWorkers.map((worker) => ({
-      "Emp ID": worker.emp_id || "N/A",
-      "Name": worker.name,
-      "Phone": worker.phone,
-      "Email": worker.email || "N/A",
-      "Gender": worker.gender || "N/A",
-      "Date of Birth": worker.date_of_birth || "N/A",
-      "Designation": worker.designation,
-      "Department": worker.department || "N/A",
-      "Work Location": worker.work_location || "N/A",
-      "Floor": worker.floor || "N/A",
-      "Date of Joining": worker.date_of_joining || "N/A",
-      "Contractor Name": worker.contractor_name || "N/A",
-      "Aadhaar": worker.aadhaar || "N/A",
-      "PAN": worker.pan || "N/A",
-      "UAN Number": worker.uan_number || "N/A",
-      "ESI Number": worker.esi_number || "N/A",
-      "Bank Name": worker.bank_name || "N/A",
-      "Bank A/C": worker.bank_ac || "N/A",
-      "IFSC Code": worker.ifsc_code || "N/A",
-      "Emergency Contact": worker.emergency_contact_number || "N/A",
-      "Address": worker.address || "N/A",
-      "Permanent Address": worker.permanent_address || "N/A",
-      "Status": worker.status,
-      ...(worker.status === "exit" ? { "Resigned Date": worker.resigned_date || "N/A" } : {}),
-    }))
+    const dataToExport = filteredWorkers.map(workerToExcelRow)
 
     const worksheet = XLSX.utils.json_to_sheet(dataToExport)
     const workbook = XLSX.utils.book_new()
@@ -391,7 +341,7 @@ export default function WorkersPage() {
 
       {/* Worker Details Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <User className="w-5 h-5" />
@@ -409,101 +359,13 @@ export default function WorkersPage() {
 
           {selectedWorker && (
             <div className="space-y-6">
-              {/* Exit Info */}
               {selectedWorker.status === "exit" && (
                 <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-lg">
                   <h3 className="text-lg font-semibold text-orange-600 mb-2">Worker Exited</h3>
                   <p className="text-sm text-muted-foreground">Resigned Date: {selectedWorker.resigned_date || "N/A"}</p>
                 </div>
               )}
-
-              {/* Basic Information */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold border-b pb-2">Basic Information</h3>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Hash className="w-4 h-4" />
-                      Employee ID
-                    </div>
-                    <div className="font-medium">{selectedWorker.emp_id || "N/A"}</div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <User className="w-4 h-4" />
-                      Full Name
-                    </div>
-                    <div className="font-medium">{selectedWorker.name}</div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Phone className="w-4 h-4" />
-                      Phone Number
-                    </div>
-                    <div className="font-medium">{selectedWorker.phone}</div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="w-4 h-4" />
-                      Date of Joining
-                    </div>
-                    <div className="font-medium">{selectedWorker.date_of_joining || "N/A"}</div>
-                  </div>
-
-                  {selectedWorker.status === "exit" && (
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <LogOut className="w-4 h-4" />
-                        Last Working Day
-                      </div>
-                      <div className="font-medium text-orange-600">{selectedWorker.resigned_date || "N/A"}</div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Work Information */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold border-b pb-2">Work Information</h3>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Briefcase className="w-4 h-4" />
-                      Designation
-                    </div>
-                    <div className="font-medium">{selectedWorker.designation}</div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Building className="w-4 h-4" />
-                      Department
-                    </div>
-                    <div className="font-medium">{selectedWorker.department || "N/A"}</div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <MapPin className="w-4 h-4" />
-                      Work Location
-                    </div>
-                    <div className="font-medium">{selectedWorker.work_location || "N/A"}</div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Building className="w-4 h-4" />
-                      Contractor
-                    </div>
-                    <div className="font-medium">{selectedWorker.contractor_name}</div>
-                  </div>
-                </div>
-              </div>
+              <WorkerDetails worker={selectedWorker} />
             </div>
           )}
         </DialogContent>

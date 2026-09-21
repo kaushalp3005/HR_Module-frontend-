@@ -10,44 +10,12 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { CheckCircle, XCircle, Eye, User, Phone, Mail, Calendar, MapPin, Building, IdCard, FileText } from "lucide-react"
+import { CheckCircle, XCircle, Eye, User } from "lucide-react"
 import { toast } from "sonner"
-import Image from "next/image"
+import { WorkerDetails } from "@/components/worker-details"
+import type { WorkerRecord } from "@/lib/worker-fields"
 
-type Worker = {
-  id: number
-  emp_id?: string
-  title?: string
-  name: string
-  gender?: string
-  date_of_birth?: string
-  phone: string
-  email?: string
-  emergency_contact_number?: string
-  designation: string
-  department?: string
-  department_other?: string
-  work_location?: string
-  work_location_other?: string
-  floor?: string
-  floor_other?: string
-  date_of_joining?: string
-  uan_number?: string
-  esi_number?: string
-  address?: string
-  currently_staying_type?: string
-  permanent_address?: string
-  rental_address?: string
-  contractor_id: string
-  contractor_name: string
-  status: string
-  aadhaar?: string
-  pan?: string
-  passport_photo_url?: string
-  aadhaar_photo_url?: string
-  pan_photo_url?: string
-  created_at: string
-}
+type Worker = WorkerRecord & { id: number }
 
 const WAREHOUSES = [
   { key: "all", label: "All" },
@@ -191,61 +159,6 @@ export default function ApprovalsPage() {
         </p>
       </div>
     )
-  }
-
-  // Helper function to get filled personal info fields
-  const getPersonalInfoFields = (worker: Worker) => {
-    const fields = [
-      { label: "Full Name", value: worker.name, icon: null },
-      { label: "Title", value: worker.title, icon: null },
-      { label: "Employee ID", value: worker.emp_id, icon: null },
-      { label: "Gender", value: worker.gender, icon: null },
-      { label: "Date of Birth", value: worker.date_of_birth, icon: <Calendar className="w-3 h-3" /> },
-      { label: "Phone Number", value: worker.phone, icon: <Phone className="w-3 h-3" /> },
-      { label: "Email Address", value: worker.email, icon: <Mail className="w-3 h-3" /> },
-      { label: "Emergency Contact", value: worker.emergency_contact_number, icon: <Phone className="w-3 h-3" /> },
-      { label: "Date of Joining", value: worker.date_of_joining, icon: <Calendar className="w-3 h-3" /> },
-      { label: "Application Date", value: new Date(worker.created_at).toLocaleDateString(), icon: <Calendar className="w-3 h-3" /> },
-    ]
-    return fields.filter(field => field.value && field.value !== "")
-  }
-
-  // Helper function to get filled work info fields
-  const getWorkInfoFields = (worker: Worker) => {
-    const fields = [
-      { label: "Designation", value: worker.designation, icon: null },
-      { label: "Department", value: worker.department, icon: null },
-      { label: "Department (Other)", value: worker.department_other, icon: null },
-      { label: "Work Location", value: worker.work_location, icon: <MapPin className="w-3 h-3" /> },
-      { label: "Work Location (Other)", value: worker.work_location_other, icon: <MapPin className="w-3 h-3" /> },
-      { label: "Floor", value: worker.floor, icon: null },
-      { label: "Floor (Other)", value: worker.floor_other, icon: null },
-      { label: "Contractor", value: worker.contractor_name, icon: null },
-      { label: "Contractor ID", value: worker.contractor_id, icon: null },
-    ]
-    return fields.filter(field => field.value && field.value !== "")
-  }
-
-  // Helper function to get filled government ID fields
-  const getGovernmentIdFields = (worker: Worker) => {
-    const fields = [
-      { label: "Aadhaar Number", value: worker.aadhaar, icon: <IdCard className="w-3 h-3" /> },
-      { label: "PAN Number", value: worker.pan, icon: <IdCard className="w-3 h-3" /> },
-      { label: "UAN Number", value: worker.uan_number, icon: <IdCard className="w-3 h-3" /> },
-      { label: "ESI Number", value: worker.esi_number, icon: <IdCard className="w-3 h-3" /> },
-    ]
-    return fields.filter(field => field.value && field.value !== "")
-  }
-
-  // Helper function to get filled address fields
-  const getAddressFields = (worker: Worker) => {
-    const fields = [
-      { label: "Current Address", value: worker.address, icon: <MapPin className="w-3 h-3" /> },
-      { label: "Staying Type", value: worker.currently_staying_type, icon: null },
-      { label: "Permanent Address", value: worker.permanent_address, icon: <MapPin className="w-3 h-3" /> },
-      { label: "Rental Address", value: worker.rental_address, icon: <MapPin className="w-3 h-3" /> },
-    ]
-    return fields.filter(field => field.value && field.value !== "")
   }
 
   const filteredPendingWorkers = selectedWarehouse === "all"
@@ -393,138 +306,7 @@ export default function ApprovalsPage() {
                 </Button>
               </div>
 
-              {/* Personal Information */}
-              {getPersonalInfoFields(selectedWorker).length > 0 && (
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold flex items-center gap-2">
-                    <User className="w-4 h-4" />
-                    Personal Information
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {getPersonalInfoFields(selectedWorker).map((field, index) => (
-                      <div key={index}>
-                        <Label className="text-muted-foreground">{field.label}</Label>
-                        <p className="font-medium flex items-center gap-1">
-                          {field.icon}
-                          {field.value}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Work Information */}
-              {getWorkInfoFields(selectedWorker).length > 0 && (
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold flex items-center gap-2">
-                    <Building className="w-4 h-4" />
-                    Work Information
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {getWorkInfoFields(selectedWorker).map((field, index) => (
-                      <div key={index}>
-                        <Label className="text-muted-foreground">{field.label}</Label>
-                        <p className="font-medium flex items-center gap-1">
-                          {field.icon}
-                          {field.value}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Government IDs */}
-              {getGovernmentIdFields(selectedWorker).length > 0 && (
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold flex items-center gap-2">
-                    <IdCard className="w-4 h-4" />
-                    Government IDs & Numbers
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {getGovernmentIdFields(selectedWorker).map((field, index) => (
-                      <div key={index}>
-                        <Label className="text-muted-foreground">{field.label}</Label>
-                        <p className="font-medium font-mono flex items-center gap-1">
-                          {field.icon}
-                          {field.value}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Address Information */}
-              {getAddressFields(selectedWorker).length > 0 && (
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold flex items-center gap-2">
-                    <MapPin className="w-4 h-4" />
-                    Address Information
-                  </h3>
-                  <div className="grid grid-cols-1 gap-4">
-                    {getAddressFields(selectedWorker).map((field, index) => (
-                      <div key={index}>
-                        <Label className="text-muted-foreground">{field.label}</Label>
-                        <p className="font-medium flex items-start gap-1">
-                          {field.icon}
-                          <span>{field.value}</span>
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Document Photos */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <FileText className="w-4 h-4" />
-                  Document Photos
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {selectedWorker.passport_photo_url && (
-                    <div className="space-y-2">
-                      <Label className="text-muted-foreground">Passport Photo</Label>
-                      <div className="relative aspect-3/4 border rounded-lg overflow-hidden">
-                        <Image
-                          src={selectedWorker.passport_photo_url}
-                          alt="Passport Photo"
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                    </div>
-                  )}
-                  {selectedWorker.aadhaar_photo_url && (
-                    <div className="space-y-2">
-                      <Label className="text-muted-foreground">Aadhaar Document</Label>
-                      <div className="relative aspect-3/2 border rounded-lg overflow-hidden">
-                        <Image
-                          src={selectedWorker.aadhaar_photo_url}
-                          alt="Aadhaar Document"
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                    </div>
-                  )}
-                  {selectedWorker.pan_photo_url && (
-                    <div className="space-y-2">
-                      <Label className="text-muted-foreground">PAN Document</Label>
-                      <div className="relative aspect-3/2 border rounded-lg overflow-hidden">
-                        <Image
-                          src={selectedWorker.pan_photo_url}
-                          alt="PAN Document"
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+              <WorkerDetails worker={selectedWorker} />
 
               {/* Action Buttons - Bottom */}
               <div className="flex flex-col sm:flex-row gap-3 p-4 bg-muted rounded-lg">
