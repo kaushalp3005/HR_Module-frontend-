@@ -7,6 +7,7 @@ import { useRouter, useParams } from "next/navigation"
 import { useAppStore } from "@/lib/store"
 import { updateWorker, API_BASE_URL } from "@/lib/api"
 import { toast } from "sonner"
+import { formatMedical, parseMedical, MEDICAL_NOT_DONE } from "@/lib/medical"
 import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
@@ -20,6 +21,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -71,7 +73,8 @@ type EditWorkerFormValues = {
   aprnSize: string
   apronLockerNo: string
   ftwrSize: string
-  mdcl: string
+  mdclDone: boolean
+  mdclDate: string
   remark: string
   passportPhoto: File | null
   aadharCard: File | null
@@ -114,7 +117,8 @@ const defaultValues: EditWorkerFormValues = {
   aprnSize: "",
   apronLockerNo: "",
   ftwrSize: "",
-  mdcl: "",
+  mdclDone: false,
+  mdclDate: "",
   remark: "",
   passportPhoto: null,
   aadharCard: null,
@@ -160,6 +164,10 @@ export default function EditWorkerPage() {
   const selectedDesignation = form.watch("designation")
   const selectedDepartment = form.watch("department")
   const currentlyStayingType = form.watch("currentlyStayingType")
+  const medicalDone = form.watch("mdclDone")
+  // Free text a worker already had in mdcl (e.g. "AUG-2026"), shown so it is not
+  // silently replaced without the contractor seeing it.
+  const [legacyMedical, setLegacyMedical] = useState("")
   const [passportPhotoPreview, setPassportPhotoPreview] = useState<string | null>(null)
   const [aadharCardPreview, setAadharCardPreview] = useState<string | null>(null)
   const [panCardPreview, setPanCardPreview] = useState<string | null>(null)
@@ -210,7 +218,10 @@ export default function EditWorkerPage() {
         form.setValue("aprnSize", data.aprn_size || "")
         form.setValue("apronLockerNo", data.apron_locker_no || "")
         form.setValue("ftwrSize", data.ftwr_size || "")
-        form.setValue("mdcl", data.mdcl || "")
+        const medical = parseMedical(data.mdcl)
+        form.setValue("mdclDone", medical.done)
+        form.setValue("mdclDate", medical.date)
+        setLegacyMedical(medical.legacy)
         form.setValue("remark", data.remark || "")
         
         setIsLoading(false)
@@ -279,6 +290,13 @@ export default function EditWorkerPage() {
   }
 
   async function onSubmit(values: EditWorkerFormValues) {
+    if (values.mdclDone && !values.mdclDate) {
+      toast.error("Medical Date Required", {
+        description: "Enter the medical date, or untick Medical done."
+      })
+      return
+    }
+
     if (!user) {
       toast.error("Authentication Error", {
         description: "You must be logged in to edit workers."
@@ -341,7 +359,7 @@ export default function EditWorkerPage() {
         aprn_size: values.aprnSize || undefined,
         apron_locker_no: values.apronLockerNo || undefined,
         ftwr_size: values.ftwrSize || undefined,
-        mdcl: values.mdcl || undefined,
+        mdcl: formatMedical(values.mdclDone, values.mdclDate),
         remark: values.remark || undefined,
         
         // Document Uploads (only if new files selected)
@@ -1082,17 +1100,51 @@ export default function EditWorkerPage() {
 
                 <FormField
                   control={form.control}
-                  name="mdcl"
+                  name="mdclDone"
                   render={({ field }) => (
                     <FormItem className="md:col-span-1">
                       <FormLabel>Medical Status</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter medical status" {...field} />
+                        <label className="flex h-9 items-center gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 accent-stone-900"
+                            checked={field.value}
+                            onChange={(e) => {
+                              field.onChange(e.target.checked)
+                              if (!e.target.checked) form.setValue("mdclDate", "")
+                            }}
+                          />
+                          <span>Medical done</span>
+                        </label>
                       </FormControl>
+                      <FormDescription>
+                        {legacyMedical
+                          ? `Currently saved as "${legacyMedical}" - saving replaces it.`
+                          : medicalDone
+                            ? "Enter the medical date."
+                            : `Saved as "${MEDICAL_NOT_DONE}".`}
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+
+                {medicalDone && (
+                  <FormField
+                    control={form.control}
+                    name="mdclDate"
+                    render={({ field }) => (
+                      <FormItem className="md:col-span-1">
+                        <FormLabel>Medical Date *</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 <FormField
                   control={form.control}

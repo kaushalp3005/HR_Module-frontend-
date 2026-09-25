@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation"
 import { useAppStore } from "@/lib/store"
 import { addWorker, getNextEmpId } from "@/lib/api"
 import { workerContractorId, workerContractorName } from "@/lib/contractors"
+import { formatMedical, MEDICAL_NOT_DONE } from "@/lib/medical"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -22,6 +23,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -85,11 +87,17 @@ const workerFormSchema = z.object({
   aprnSize: z.string().optional(),
   apronLockerNo: z.string().optional(),
   ftwrSize: z.string().optional(),
-  mdcl: z.string().optional(),
+  mdclDone: z.boolean(),
+  mdclDate: z.string().optional(),
   remark: z.string().optional(),
   passportPhoto: z.any().refine(val => val !== null, "Passport photo is required"),
   aadharCard: z.any().refine(val => val !== null, "Aadhaar card photo is required"),
   panCard: z.any().optional(),
+}).superRefine((values, ctx) => {
+  // A ticked medical checkbox has to carry the date that goes into the database.
+  if (values.mdclDone && !values.mdclDate) {
+    ctx.addIssue({ code: "custom", path: ["mdclDate"], message: "Medical date is required" })
+  }
 })
 
 type AddWorkerFormValues = z.infer<typeof workerFormSchema>
@@ -126,7 +134,8 @@ const defaultValues: Partial<AddWorkerFormValues> = {
   aprnSize: "",
   apronLockerNo: "",
   ftwrSize: "",
-  mdcl: "",
+  mdclDone: false,
+  mdclDate: "",
   remark: "",
   emrcyPNm: "",
   resp: "",
@@ -175,6 +184,7 @@ export default function AddWorkerPage() {
   const selectedDesignation = form.watch("designation")
   const selectedDepartment = form.watch("department")
   const currentlyStayingType = form.watch("currentlyStayingType")
+  const medicalDone = form.watch("mdclDone")
   const [passportPhotoPreview, setPassportPhotoPreview] = useState<string | null>(null)
   const [aadharCardPreview, setAadharCardPreview] = useState<string | null>(null)
   const [panCardPreview, setPanCardPreview] = useState<string | null>(null)
@@ -369,7 +379,7 @@ export default function AddWorkerPage() {
         aprn_size: values.aprnSize || undefined,
         apron_locker_no: values.apronLockerNo || undefined,
         ftwr_size: values.ftwrSize || undefined,
-        mdcl: values.mdcl || undefined,
+        mdcl: formatMedical(values.mdclDone, values.mdclDate || ""),
         remark: values.remark || undefined,
         
         // Contractor Information
@@ -1090,17 +1100,47 @@ export default function AddWorkerPage() {
 
                 <FormField
                   control={form.control}
-                  name="mdcl"
+                  name="mdclDone"
                   render={({ field }) => (
                     <FormItem className="md:col-span-1">
                       <FormLabel>Medical Status</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter medical status" {...field} />
+                        <label className="flex h-9 items-center gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 accent-stone-900"
+                            checked={field.value}
+                            onChange={(e) => {
+                              field.onChange(e.target.checked)
+                              if (!e.target.checked) form.setValue("mdclDate", "")
+                            }}
+                          />
+                          <span>Medical done</span>
+                        </label>
                       </FormControl>
+                      <FormDescription>
+                        {medicalDone ? "Enter the medical date." : `Saved as "${MEDICAL_NOT_DONE}".`}
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+
+                {medicalDone && (
+                  <FormField
+                    control={form.control}
+                    name="mdclDate"
+                    render={({ field }) => (
+                      <FormItem className="md:col-span-1">
+                        <FormLabel>Medical Date *</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 <FormField
                   control={form.control}
@@ -1265,7 +1305,7 @@ export default function AddWorkerPage() {
               </div>
 
               {/* Submit Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-6 border-t">
+              <div className="flex items-center justify-center gap-3 pt-6 border-t">
                 <Button type="reset" variant="outline" onClick={() => form.reset()} disabled={isSubmitting}>
                   Reset
                 </Button>

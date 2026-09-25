@@ -53,17 +53,26 @@ export function ResponsiveTable<T extends { id: string }>({
     fitWidth && "whitespace-normal break-words align-bottom",
   )
 
-  const cellClass = cn(
+  const baseCellClass = cn(
     "text-xs sm:text-sm px-2 sm:px-4",
     fitWidth
       ? "py-3 sm:py-4 align-middle whitespace-normal break-words leading-snug"
-      : "py-2 sm:py-3 truncate",
+      : "py-2 sm:py-3",
   )
+
+  const cellClass = cn(baseCellClass, !fitWidth && "truncate")
+
+  // Scrolling mode: keep the table at its natural width so action buttons are never
+  // squeezed out of view - the wrapper scrolls horizontally instead.
+  const tableClass = cn("w-full table-fixed", !fitWidth && "min-w-[1000px]")
+
+  // Action buttons keep their own cell class: "truncate" would clip them.
+  const actionsCellClass = cn(baseCellClass, "whitespace-nowrap")
 
   return (
     <div className="w-full rounded-lg border border-border overflow-hidden">
       <div className={scrollAreaClass} onScroll={fitWidth ? undefined : handleScroll}>
-        <Table className="w-full table-fixed">
+        <Table className={tableClass}>
           <TableHeader className="bg-muted/50 sticky top-0 z-10">
             <TableRow>
               {visibleColumns.map((col) => (
@@ -73,7 +82,7 @@ export function ResponsiveTable<T extends { id: string }>({
               ))}
               {actions && (
                 <TableHead
-                  className={cn(headClass, !actionsWidth && "w-24")}
+                  className={cn(headClass, !actionsWidth && "w-40")}
                   style={actionsWidth ? { width: actionsWidth } : undefined}
                 >
                   Actions
@@ -105,7 +114,7 @@ export function ResponsiveTable<T extends { id: string }>({
                   ))}
                   {actions && (
                     <TableCell
-                      className={cn(cellClass, !actionsWidth && "w-24")}
+                      className={cn(actionsCellClass, !actionsWidth && "w-40")}
                       style={actionsWidth ? { width: actionsWidth } : undefined}
                     >
                       {actions(row)}
