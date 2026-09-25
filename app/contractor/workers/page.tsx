@@ -11,7 +11,8 @@ import { ResponsiveTable } from "@/components/responsive-table"
 import { ExitWorkerDialog, type ExitWorkerTarget } from "@/components/exit-worker-dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Eye, Edit2, Trash2, Plus, Upload, LogOut } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Eye, Edit2, Trash2, Plus, LogOut, Search } from "lucide-react"
 
 interface Worker {
   id: string  // Changed to string to match ResponsiveTable requirements
@@ -22,6 +23,7 @@ interface Worker {
   department: string
   work_location: string
   date_of_joining: string
+  created_at?: string
   status: string
   contractor_id: string
 }
@@ -34,11 +36,32 @@ const WAREHOUSES = [
   { key: "HOH-101", label: "HOH-101" },
 ]
 
+// Filters on when the worker was added (created_at); null means no date limit.
+const DATE_RANGES = [
+  { key: "all", label: "All time", days: null },
+  { key: "today", label: "Today", days: 0 },
+  { key: "7d", label: "Last 7 days", days: 7 },
+  { key: "30d", label: "Last 30 days", days: 30 },
+] as const
+
+function addedWithinDays(worker: Worker, days: number | null) {
+  if (days === null) return true
+  if (!worker.created_at) return false
+  const added = new Date(worker.created_at)
+  if (isNaN(added.getTime())) return false
+  const cutoff = new Date()
+  cutoff.setHours(0, 0, 0, 0)
+  cutoff.setDate(cutoff.getDate() - days)
+  return added >= cutoff
+}
+
 export default function ContractorWorkersPage() {
   const user = useAppStore((state) => state.user)
   const [workers, setWorkers] = useState<Worker[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedWarehouse, setSelectedWarehouse] = useState("all")
+  const [selectedRange, setSelectedRange] = useState<string>("all")
+  const [searchQuery, setSearchQuery] = useState("")
   const [exitTarget, setExitTarget] = useState<ExitWorkerTarget | null>(null)
 
   // Fetch workers from API
@@ -92,9 +115,21 @@ export default function ContractorWorkersPage() {
     }
   }
 
-  const filteredWorkers = selectedWarehouse === "all"
-    ? workers
-    : workers.filter(w => w.work_location?.toUpperCase().includes(selectedWarehouse.toUpperCase()))
+  const dateRange = DATE_RANGES.find(r => r.key === selectedRange) ?? DATE_RANGES[0]
+  const query = searchQuery.toLowerCase().trim()
+
+  const filteredWorkers = workers
+    .filter(w => {
+      const warehouseMatch = selectedWarehouse === "all" ||
+        w.work_location?.toUpperCase().includes(selectedWarehouse.toUpperCase())
+      const searchMatch = !query ||
+        w.name?.toLowerCase().includes(query) ||
+        w.emp_id?.toLowerCase().includes(query) ||
+        w.phone?.toLowerCase().includes(query)
+      return warehouseMatch && searchMatch && addedWithinDays(w, dateRange.days)
+    })
+    // Pending workers first so the contractor sees what HR has not cleared yet.
+    .sort((a, b) => (a.status === "pending" ? 0 : 1) - (b.status === "pending" ? 0 : 1))
 
   const columns = [
     {
@@ -201,11 +236,39 @@ export default function ContractorWorkersPage() {
         })}
       </div>
 
+      {/* Added-date filter + search */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex flex-wrap gap-2">
+          {DATE_RANGES.map((range) => (
+            <button
+              key={range.key}
+              onClick={() => setSelectedRange(range.key)}
+              className={`inline-flex items-center px-4 py-1.5 rounded-full text-sm font-medium transition-colors border ${
+                selectedRange === range.key
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-muted text-muted-foreground border-border hover:bg-accent hover:text-accent-foreground"
+              }`}
+            >
+              {range.label}
+            </button>
+          ))}
+        </div>
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by name, emp ID, or phone number..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+      </div>
+
       <div className="rounded-lg border border-border overflow-hidden">
         {loading ? (
           <div className="p-8 text-center text-muted-foreground">Loading workers...</div>
         ) : filteredWorkers.length === 0 ? (
-          <div className="p-8 text-center text-muted-foreground">No workers found.</div>
+          <div className="p-8 text-center text-muted-foreground">No workers match the current filters.</div>
         ) : (
           <ResponsiveTable
             columns={columns}
