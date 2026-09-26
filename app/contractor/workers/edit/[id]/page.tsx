@@ -7,7 +7,16 @@ import { useRouter, useParams } from "next/navigation"
 import { useAppStore } from "@/lib/store"
 import { updateWorker, API_BASE_URL } from "@/lib/api"
 import { toast } from "sonner"
-import { formatMedical, parseMedical, MEDICAL_NOT_DONE } from "@/lib/medical"
+import { shrinkImage, formatBytes, MAX_UPLOAD_BYTES, MAX_SENT_BYTES } from "@/lib/image"
+import { parseMedical, MEDICAL_NOT_DONE } from "@/lib/medical"
+import { optionsWithCurrent } from "@/lib/options"
+import {
+  changedFields,
+  MAX_LENGTH,
+  storedFormValues,
+  workerToFormValues,
+  type EditWorkerFormValues,
+} from "@/lib/worker-form"
 import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
@@ -36,50 +45,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-
-type EditWorkerFormValues = {
-  empNo: string
-  title: string
-  workerName: string
-  gender: string
-  dateOfJoining: string
-  designation: string
-  designationOther: string
-  department: string
-  departmentOther: string
-  workLocation: string
-  workLocationOther: string
-  floor: string
-  floorOther: string
-  contactNumber: string
-  email: string
-  emergencyContactNumber: string
-  emrcyPNm: string
-  resp: string
-  emrcyConNo: string
-  dateOfBirth: string
-  uanNumber: string
-  esiNumber: string
-  aadharNumber: string
-  panNumber: string
-  address: string
-  currentlyStayingType: "permanent" | "rental" | ""
-  permanentAddress: string
-  rentalAddress: string
-  pinCode: string
-  bankName: string
-  bankAc: string
-  ifscCode: string
-  aprnSize: string
-  apronLockerNo: string
-  ftwrSize: string
-  mdclDone: boolean
-  mdclDate: string
-  remark: string
-  passportPhoto: File | null
-  aadharCard: File | null
-  panCard: File | null
-}
 
 const defaultValues: EditWorkerFormValues = {
   empNo: "",
@@ -155,7 +120,12 @@ export default function EditWorkerPage() {
   const user = useAppStore((state) => state.user)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
-  
+  // Set when the worker could not be loaded. The form is then not shown: saving the
+  // empty form would have written blanks over the worker's name, phone and designation.
+  const [loadError, setLoadError] = useState<string | null>(null)
+  // What is saved for this worker; a save sends only the fields that differ from it.
+  const [storedValues, setStoredValues] = useState<EditWorkerFormValues | null>(null)
+
   const form = useForm<EditWorkerFormValues>({
     defaultValues,
   })
@@ -168,6 +138,13 @@ export default function EditWorkerPage() {
   // Free text a worker already had in mdcl (e.g. "AUG-2026"), shown so it is not
   // silently replaced without the contractor seeing it.
   const [legacyMedical, setLegacyMedical] = useState("")
+  // Photos already stored for this worker. Kept apart from the previews so the form
+  // can say whether a picture is the saved one or a newly chosen replacement.
+  const [savedPhotos, setSavedPhotos] = useState<{ passport: string | null; aadhaar: string | null; pan: string | null }>({
+    passport: null,
+    aadhaar: null,
+    pan: null,
+  })
   const [passportPhotoPreview, setPassportPhotoPreview] = useState<string | null>(null)
   const [aadharCardPreview, setAadharCardPreview] = useState<string | null>(null)
   const [panCardPreview, setPanCardPreview] = useState<string | null>(null)
@@ -181,49 +158,22 @@ export default function EditWorkerPage() {
           throw new Error("Failed to fetch worker data")
         }
         const data = await response.json()
-        
+
         // Populate form with existing data
-        form.setValue("empNo", data.emp_id || "")
-        form.setValue("title", data.title || "")
-        form.setValue("workerName", data.name || "")
-        form.setValue("gender", data.gender || "")
-        form.setValue("dateOfJoining", data.date_of_joining || "")
-        form.setValue("designation", data.designation || "")
-        form.setValue("designationOther", data.designation_other || "")
-        form.setValue("department", data.department || "")
-        form.setValue("departmentOther", data.department_other || "")
-        form.setValue("workLocation", data.work_location || "")
-        form.setValue("workLocationOther", data.work_location_other || "")
-        form.setValue("floor", data.floor || "")
-        form.setValue("floorOther", data.floor_other || "")
-        form.setValue("contactNumber", data.phone || "")
-        form.setValue("emergencyContactNumber", data.emergency_contact_number || "")
-        form.setValue("dateOfBirth", data.date_of_birth || "")
-        form.setValue("uanNumber", data.uan_number || "")
-        form.setValue("esiNumber", data.esi_number || "")
-        form.setValue("aadharNumber", data.aadhaar || "")
-        form.setValue("panNumber", data.pan || "")
-        form.setValue("address", data.address || "")
-        form.setValue("currentlyStayingType", data.currently_staying_type || "")
-        form.setValue("permanentAddress", data.permanent_address || "")
-        form.setValue("rentalAddress", data.rental_address || "")
-        form.setValue("email", data.email || "")
-        form.setValue("emrcyPNm", data.emrcy_p_nm || "")
-        form.setValue("resp", data.resp || "")
-        form.setValue("emrcyConNo", data.emrcy_con_no || "")
-        form.setValue("pinCode", data.pin_code || "")
-        form.setValue("bankName", data.bank_name || "")
-        form.setValue("bankAc", data.bank_ac || "")
-        form.setValue("ifscCode", data.ifsc_code || "")
-        form.setValue("aprnSize", data.aprn_size || "")
-        form.setValue("apronLockerNo", data.apron_locker_no || "")
-        form.setValue("ftwrSize", data.ftwr_size || "")
-        const medical = parseMedical(data.mdcl)
-        form.setValue("mdclDone", medical.done)
-        form.setValue("mdclDate", medical.date)
-        setLegacyMedical(medical.legacy)
-        form.setValue("remark", data.remark || "")
-        
+        form.reset(workerToFormValues(data))
+        setStoredValues(storedFormValues(data))
+        setLegacyMedical(parseMedical(data.mdcl).legacy)
+
+        // Show the photos already on file instead of empty upload boxes.
+        setSavedPhotos({
+          passport: data.passport_photo_url || null,
+          aadhaar: data.aadhaar_photo_url || null,
+          pan: data.pan_photo_url || null,
+        })
+        setPassportPhotoPreview(data.passport_photo_url || null)
+        setAadharCardPreview(data.aadhaar_photo_url || null)
+        setPanCardPreview(data.pan_photo_url || null)
+
         setIsLoading(false)
         toast.success("Worker Data Loaded", {
           description: "You can now edit the worker details."
@@ -233,6 +183,7 @@ export default function EditWorkerPage() {
         toast.error("Failed to Load Worker", {
           description: error.message || "Could not fetch worker details."
         })
+        setLoadError(error.message || "Could not fetch worker details.")
         setIsLoading(false)
       }
     }
@@ -242,16 +193,16 @@ export default function EditWorkerPage() {
     }
   }, [workerId, form])
 
-  const handleFileChange = (
+  const handleFileChange = async (
     e: React.ChangeEvent<HTMLInputElement>,
     fieldName: "passportPhoto" | "aadharCard" | "panCard",
     setPreview: (url: string | null) => void
   ) => {
-    const file = e.target.files?.[0]
-    if (file) {
+    const original = e.target.files?.[0]
+    if (original) {
       // Validate image format
       const validFormats = ["image/jpeg", "image/jpg", "image/png"]
-      if (!validFormats.includes(file.type)) {
+      if (!validFormats.includes(original.type)) {
         toast.error("Invalid File Format", {
           description: "Please upload only JPG, JPEG, or PNG image formats."
         })
@@ -259,10 +210,21 @@ export default function EditWorkerPage() {
         return
       }
 
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
+      if (original.size > MAX_UPLOAD_BYTES) {
         toast.error("File Too Large", {
-          description: "File size should not exceed 5MB. Please compress the image."
+          description: `Photos may be up to ${formatBytes(MAX_UPLOAD_BYTES)}. This one is ${formatBytes(original.size)}.`
+        })
+        e.target.value = ""
+        return
+      }
+
+      // Phone photos are far bigger than an ID document needs, and three of them
+      // together are rejected by the API gateway, so shrink before uploading.
+      const file = await shrinkImage(original)
+
+      if (file.size > MAX_SENT_BYTES) {
+        toast.error("Could Not Compress Image", {
+          description: "This image could not be made small enough to upload. Please use a smaller photo."
         })
         e.target.value = ""
         return
@@ -274,9 +236,11 @@ export default function EditWorkerPage() {
         setPreview(reader.result as string)
       }
       reader.readAsDataURL(file)
-      
+
       toast.success("File Uploaded", {
-        description: `${file.name} has been uploaded successfully.`
+        description: file.size < original.size
+          ? `${original.name} added (compressed ${formatBytes(original.size)} to ${formatBytes(file.size)}).`
+          : `${original.name} has been uploaded successfully.`
       })
     }
   }
@@ -286,7 +250,12 @@ export default function EditWorkerPage() {
     setPreview: (url: string | null) => void
   ) => {
     form.setValue(fieldName, null)
-    setPreview(null)
+    // Undoing a replacement brings the stored photo back into view; the saved photo
+    // itself is only replaced when the form is submitted with a new file.
+    const saved = fieldName === "passportPhoto" ? savedPhotos.passport
+      : fieldName === "aadharCard" ? savedPhotos.aadhaar
+      : savedPhotos.pan
+    setPreview(saved)
   }
 
   async function onSubmit(values: EditWorkerFormValues) {
@@ -304,6 +273,16 @@ export default function EditWorkerPage() {
       return
     }
 
+    // The form is only rendered once the worker has loaded
+    if (!storedValues) return
+    const changes = changedFields(values, storedValues)
+    if (Object.keys(changes).length === 0 && !values.passportPhoto && !values.aadharCard && !values.panCard) {
+      toast.info("No Changes to Save", {
+        description: "Nothing was changed for this worker."
+      })
+      return
+    }
+
     setIsSubmitting(true)
     const toastId = toast.loading("Updating worker...", {
       description: "Saving changes and updating documents..."
@@ -311,57 +290,8 @@ export default function EditWorkerPage() {
 
     try {
       const response = await updateWorker(Number(workerId), {
-        // Basic Information
-        emp_id: values.empNo || undefined,
-        title: values.title || undefined,
-        name: values.workerName,
-        gender: values.gender || undefined,
-        date_of_birth: values.dateOfBirth || undefined,
-        date_of_joining: values.dateOfJoining || undefined,
-        
-        // Contact Information
-        phone: values.contactNumber,
-        email: values.email || undefined,
-        emergency_contact_number: values.emergencyContactNumber || undefined,
-        emrcy_p_nm: values.emrcyPNm || undefined,
-        resp: values.resp || undefined,
-        emrcy_con_no: values.emrcyConNo || undefined,
-        
-        // Work Information
-        designation: values.designation,
-        designation_other: values.designationOther || undefined,
-        department: values.department || undefined,
-        department_other: values.departmentOther || undefined,
-        work_location: values.workLocation || undefined,
-        work_location_other: values.workLocationOther || undefined,
-        floor: values.floor || undefined,
-        floor_other: values.floorOther || undefined,
-        
-        // Government IDs
-        aadhaar: values.aadharNumber || undefined,
-        pan: values.panNumber || undefined,
-        uan_number: values.uanNumber || undefined,
-        esi_number: values.esiNumber || undefined,
-        
-        // Address Information
-        address: values.address || undefined,
-        currently_staying_type: values.currentlyStayingType || undefined,
-        permanent_address: values.permanentAddress || undefined,
-        rental_address: values.rentalAddress || undefined,
-        pin_code: values.pinCode || undefined,
+        ...changes,
 
-        // Banking Information
-        bank_name: values.bankName || undefined,
-        bank_ac: values.bankAc || undefined,
-        ifsc_code: values.ifscCode || undefined,
-
-        // Additional Information
-        aprn_size: values.aprnSize || undefined,
-        apron_locker_no: values.apronLockerNo || undefined,
-        ftwr_size: values.ftwrSize || undefined,
-        mdcl: formatMedical(values.mdclDone, values.mdclDate),
-        remark: values.remark || undefined,
-        
         // Document Uploads (only if new files selected)
         passport_photo: values.passportPhoto || undefined,
         aadhaar_photo: values.aadharCard || undefined,
@@ -395,6 +325,25 @@ export default function EditWorkerPage() {
         <Card>
           <CardContent className="p-8 text-center">
             <p className="text-muted-foreground">Loading worker data...</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div className="mx-auto max-w-5xl">
+        <Card>
+          <CardContent className="space-y-4 p-8 text-center">
+            <p className="font-medium text-stone-900">Could not load this worker</p>
+            <p className="text-sm text-muted-foreground">{loadError}</p>
+            <div className="flex justify-center gap-3">
+              <Button onClick={() => window.location.reload()}>Try Again</Button>
+              <Button variant="outline" asChild>
+                <Link href="/contractor/workers">Back to List</Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -470,7 +419,7 @@ export default function EditWorkerPage() {
                             <SelectValue placeholder="Select title" />
                           </SelectTrigger>
                           <SelectContent>
-                            {titleOptions.map((option) => (
+                            {optionsWithCurrent(titleOptions, form.watch("title")).map((option) => (
                               <SelectItem key={option} value={option}>
                                 {option}
                               </SelectItem>
@@ -490,7 +439,7 @@ export default function EditWorkerPage() {
                     <FormItem className="md:col-span-2">
                       <FormLabel>Name of the Worker</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter full name" {...field} />
+                        <Input maxLength={MAX_LENGTH.workerName} placeholder="Enter full name" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -512,7 +461,7 @@ export default function EditWorkerPage() {
                             <SelectValue placeholder="Select gender" />
                           </SelectTrigger>
                           <SelectContent>
-                            {genderOptions.map((option) => (
+                            {optionsWithCurrent(genderOptions, form.watch("gender")).map((option) => (
                               <SelectItem key={option} value={option}>
                                 {option.replaceAll("_", " ")}
                               </SelectItem>
@@ -560,7 +509,7 @@ export default function EditWorkerPage() {
                             <SelectValue placeholder="Select designation" />
                           </SelectTrigger>
                           <SelectContent>
-                            {designationOptions.map((option) => (
+                            {optionsWithCurrent(designationOptions, selectedDesignation).map((option) => (
                               <SelectItem key={option} value={option}>
                                 {option}
                               </SelectItem>
@@ -581,7 +530,7 @@ export default function EditWorkerPage() {
                       <FormItem className="md:col-span-1">
                         <FormLabel>Please specify designation</FormLabel>
                         <FormControl>
-                          <Input
+                          <Input maxLength={MAX_LENGTH.designationOther}
                             placeholder="Enter designation"
                             {...field}
                           />
@@ -607,7 +556,7 @@ export default function EditWorkerPage() {
                             <SelectValue placeholder="Select department" />
                           </SelectTrigger>
                           <SelectContent>
-                            {departmentOptions.map((option) => (
+                            {optionsWithCurrent(departmentOptions, selectedDepartment).map((option) => (
                               <SelectItem key={option} value={option}>
                                 {option}
                               </SelectItem>
@@ -628,7 +577,7 @@ export default function EditWorkerPage() {
                       <FormItem className="md:col-span-1">
                         <FormLabel>Specify Department</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter department name" {...field} />
+                          <Input maxLength={MAX_LENGTH.departmentOther} placeholder="Enter department name" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -651,7 +600,7 @@ export default function EditWorkerPage() {
                             <SelectValue placeholder="Select location" />
                           </SelectTrigger>
                           <SelectContent>
-                            {locationOptions.map((option) => (
+                            {optionsWithCurrent(locationOptions, selectedWorkLocation).map((option) => (
                               <SelectItem key={option} value={option}>
                                 {option}
                               </SelectItem>
@@ -672,7 +621,7 @@ export default function EditWorkerPage() {
                       <FormItem className="md:col-span-1">
                         <FormLabel>Specify Work Location</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter work location" {...field} />
+                          <Input maxLength={MAX_LENGTH.workLocationOther} placeholder="Enter work location" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -695,7 +644,7 @@ export default function EditWorkerPage() {
                             <SelectValue placeholder="Select floor" />
                           </SelectTrigger>
                           <SelectContent>
-                            {floorOptions.map((option) => (
+                            {optionsWithCurrent(floorOptions, selectedFloor).map((option) => (
                               <SelectItem key={option} value={option}>
                                 {option}
                               </SelectItem>
@@ -716,7 +665,7 @@ export default function EditWorkerPage() {
                       <FormItem className="md:col-span-1">
                         <FormLabel>Specify Floor</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter floor name" {...field} />
+                          <Input maxLength={MAX_LENGTH.floorOther} placeholder="Enter floor name" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -737,7 +686,7 @@ export default function EditWorkerPage() {
                     <FormItem className="md:col-span-1">
                       <FormLabel>Contact Number <span className="text-red-500">*</span></FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter primary contact number" type="tel" {...field} />
+                        <Input maxLength={MAX_LENGTH.contactNumber} placeholder="Enter primary contact number" type="tel" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -751,7 +700,7 @@ export default function EditWorkerPage() {
                     <FormItem className="md:col-span-1">
                       <FormLabel>Email (Optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter email address" type="email" {...field} />
+                        <Input maxLength={MAX_LENGTH.email} placeholder="Enter email address" type="email" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -765,7 +714,7 @@ export default function EditWorkerPage() {
                     <FormItem className="md:col-span-1">
                       <FormLabel>Emergency Contact Number <span className="text-red-500">*</span></FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter emergency contact number" type="tel" {...field} />
+                        <Input maxLength={MAX_LENGTH.emergencyContactNumber} placeholder="Enter emergency contact number" type="tel" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -779,7 +728,7 @@ export default function EditWorkerPage() {
                     <FormItem className="md:col-span-1">
                       <FormLabel>Emergency Person Name (Optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter emergency person name" {...field} />
+                        <Input maxLength={MAX_LENGTH.emrcyPNm} placeholder="Enter emergency person name" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -793,7 +742,7 @@ export default function EditWorkerPage() {
                     <FormItem className="md:col-span-1">
                       <FormLabel>Relationship (Optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Father, Spouse, Brother" {...field} />
+                        <Input maxLength={MAX_LENGTH.resp} placeholder="e.g., Father, Spouse, Brother" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -807,7 +756,7 @@ export default function EditWorkerPage() {
                     <FormItem className="md:col-span-1">
                       <FormLabel>Additional Emergency Contact (Optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter additional contact" type="tel" {...field} />
+                        <Input maxLength={MAX_LENGTH.emrcyConNo} placeholder="Enter additional contact" type="tel" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -841,7 +790,7 @@ export default function EditWorkerPage() {
                     <FormItem className="md:col-span-1">
                       <FormLabel>UAN Number <span className="text-red-500">*</span></FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter UAN number" {...field} />
+                        <Input maxLength={MAX_LENGTH.uanNumber} placeholder="Enter UAN number" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -855,7 +804,7 @@ export default function EditWorkerPage() {
                     <FormItem className="md:col-span-1">
                       <FormLabel>ESI Number <span className="text-red-500">*</span></FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter ESI number" {...field} />
+                        <Input maxLength={MAX_LENGTH.esiNumber} placeholder="Enter ESI number" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -995,7 +944,7 @@ export default function EditWorkerPage() {
                     <FormItem className="md:col-span-1">
                       <FormLabel>PIN Code (Optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter PIN code" {...field} />
+                        <Input maxLength={MAX_LENGTH.pinCode} placeholder="Enter PIN code" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1015,7 +964,7 @@ export default function EditWorkerPage() {
                     <FormItem className="md:col-span-1">
                       <FormLabel>Bank Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter bank name" {...field} />
+                        <Input maxLength={MAX_LENGTH.bankName} placeholder="Enter bank name" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1029,7 +978,7 @@ export default function EditWorkerPage() {
                     <FormItem className="md:col-span-1">
                       <FormLabel>Bank Account Number</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter account number" {...field} />
+                        <Input maxLength={MAX_LENGTH.bankAc} placeholder="Enter account number" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1043,7 +992,7 @@ export default function EditWorkerPage() {
                     <FormItem className="md:col-span-1">
                       <FormLabel>IFSC Code</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter IFSC code" {...field} />
+                        <Input maxLength={MAX_LENGTH.ifscCode} placeholder="Enter IFSC code" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1063,7 +1012,7 @@ export default function EditWorkerPage() {
                     <FormItem className="md:col-span-1">
                       <FormLabel>Apron Size</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., S, M, L, XL" {...field} />
+                        <Input maxLength={MAX_LENGTH.aprnSize} placeholder="e.g., S, M, L, XL" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1077,7 +1026,7 @@ export default function EditWorkerPage() {
                     <FormItem className="md:col-span-1">
                       <FormLabel>Apron Locker No.</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., 101" {...field} />
+                        <Input maxLength={MAX_LENGTH.apronLockerNo} placeholder="e.g., 101" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1091,7 +1040,7 @@ export default function EditWorkerPage() {
                     <FormItem className="md:col-span-1">
                       <FormLabel>Footwear Size</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., 7, 8, 9" {...field} />
+                        <Input maxLength={MAX_LENGTH.ftwrSize} placeholder="e.g., 7, 8, 9" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1120,7 +1069,7 @@ export default function EditWorkerPage() {
                       </FormControl>
                       <FormDescription>
                         {legacyMedical
-                          ? `Currently saved as "${legacyMedical}" - saving replaces it.`
+                          ? `Currently saved as "${legacyMedical}". Tick Medical done and enter the date to replace it.`
                           : medicalDone
                             ? "Enter the medical date."
                             : `Saved as "${MEDICAL_NOT_DONE}".`}
@@ -1153,7 +1102,7 @@ export default function EditWorkerPage() {
                     <FormItem className="md:col-span-1">
                       <FormLabel>Remarks</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter any remarks" {...field} />
+                        <Input maxLength={MAX_LENGTH.remark} placeholder="Enter any remarks" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1165,7 +1114,7 @@ export default function EditWorkerPage() {
               {/* Document Upload Section */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-stone-900 border-b pb-2">Document Uploads</h3>
-                <p className="text-sm text-stone-500 mb-4">Upload only to replace existing documents (JPG, JPEG, PNG only, max 5MB each)</p>
+                <p className="text-sm text-stone-500 mb-4">Photos already on file are shown below. Upload only to replace one (JPG, JPEG, PNG only, max 10MB each)</p>
                 
                 {/* Passport Photo */}
                 <FormField
@@ -1177,26 +1126,40 @@ export default function EditWorkerPage() {
                       <FormControl>
                         <div className="space-y-2">
                           {passportPhotoPreview ? (
-                            <div className="relative inline-block">
-                              <img
-                                src={passportPhotoPreview}
-                                alt="Passport preview"
-                                className="h-32 w-32 rounded-lg border object-cover"
-                              />
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                size="icon"
-                                className="absolute -right-2 -top-2 h-6 w-6"
-                                onClick={() =>
-                                  handleRemoveFile(
-                                    "passportPhoto",
-                                    setPassportPhotoPreview
-                                  )
-                                }
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
+                            <div className="space-y-2">
+                              <div className="relative inline-block">
+                                <img
+                                  src={passportPhotoPreview}
+                                  alt="Passport preview"
+                                  className="h-32 w-32 rounded-lg border object-cover"
+                                />
+                                {passportPhotoPreview !== savedPhotos.passport && (
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="icon"
+                                    className="absolute -right-2 -top-2 h-6 w-6"
+                                    title="Undo replacement"
+                                    onClick={() => handleRemoveFile("passportPhoto", setPassportPhotoPreview)}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span className="text-xs text-stone-500">
+                                  {passportPhotoPreview === savedPhotos.passport ? "Photo on file" : "New photo - saved when you update"}
+                                </span>
+                                <label className="cursor-pointer text-xs font-medium text-orange-600 underline">
+                                  Replace photo
+                                  <input
+                                    type="file"
+                                    className="hidden"
+                                    accept="image/jpeg,image/jpg,image/png"
+                                    onChange={(e) => handleFileChange(e, "passportPhoto", setPassportPhotoPreview)}
+                                  />
+                                </label>
+                              </div>
                             </div>
                           ) : (
                             <label className="flex h-32 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 hover:bg-gray-100">
@@ -1206,7 +1169,7 @@ export default function EditWorkerPage() {
                                   Click to upload passport photo
                                 </p>
                                 <p className="text-xs text-gray-400">
-                                  JPG, PNG (MAX. 5MB)
+                                  JPG, PNG (MAX. 10MB)
                                 </p>
                               </div>
                               <input
@@ -1240,26 +1203,40 @@ export default function EditWorkerPage() {
                       <FormControl>
                         <div className="space-y-2">
                           {aadharCardPreview ? (
-                            <div className="relative inline-block">
-                              <img
-                                src={aadharCardPreview}
-                                alt="Aadhaar preview"
-                                className="h-32 w-48 rounded-lg border object-cover"
-                              />
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                size="icon"
-                                className="absolute -right-2 -top-2 h-6 w-6"
-                                onClick={() =>
-                                  handleRemoveFile(
-                                    "aadharCard",
-                                    setAadharCardPreview
-                                  )
-                                }
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
+                            <div className="space-y-2">
+                              <div className="relative inline-block">
+                                <img
+                                  src={aadharCardPreview}
+                                  alt="Aadhaar preview"
+                                  className="h-32 w-48 rounded-lg border object-cover"
+                                />
+                                {aadharCardPreview !== savedPhotos.aadhaar && (
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="icon"
+                                    className="absolute -right-2 -top-2 h-6 w-6"
+                                    title="Undo replacement"
+                                    onClick={() => handleRemoveFile("aadharCard", setAadharCardPreview)}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span className="text-xs text-stone-500">
+                                  {aadharCardPreview === savedPhotos.aadhaar ? "Photo on file" : "New photo - saved when you update"}
+                                </span>
+                                <label className="cursor-pointer text-xs font-medium text-orange-600 underline">
+                                  Replace photo
+                                  <input
+                                    type="file"
+                                    className="hidden"
+                                    accept="image/jpeg,image/jpg,image/png"
+                                    onChange={(e) => handleFileChange(e, "aadharCard", setAadharCardPreview)}
+                                  />
+                                </label>
+                              </div>
                             </div>
                           ) : (
                             <label className="flex h-32 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 hover:bg-gray-100">
@@ -1269,7 +1246,7 @@ export default function EditWorkerPage() {
                                   Click to upload Aadhaar card
                                 </p>
                                 <p className="text-xs text-gray-400">
-                                  JPG, PNG (MAX. 5MB)
+                                  JPG, PNG (MAX. 10MB)
                                 </p>
                               </div>
                               <input
@@ -1303,23 +1280,40 @@ export default function EditWorkerPage() {
                       <FormControl>
                         <div className="space-y-2">
                           {panCardPreview ? (
-                            <div className="relative inline-block">
-                              <img
-                                src={panCardPreview}
-                                alt="PAN preview"
-                                className="h-32 w-48 rounded-lg border object-cover"
-                              />
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                size="icon"
-                                className="absolute -right-2 -top-2 h-6 w-6"
-                                onClick={() =>
-                                  handleRemoveFile("panCard", setPanCardPreview)
-                                }
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
+                            <div className="space-y-2">
+                              <div className="relative inline-block">
+                                <img
+                                  src={panCardPreview}
+                                  alt="PAN preview"
+                                  className="h-32 w-48 rounded-lg border object-cover"
+                                />
+                                {panCardPreview !== savedPhotos.pan && (
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="icon"
+                                    className="absolute -right-2 -top-2 h-6 w-6"
+                                    title="Undo replacement"
+                                    onClick={() => handleRemoveFile("panCard", setPanCardPreview)}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span className="text-xs text-stone-500">
+                                  {panCardPreview === savedPhotos.pan ? "Photo on file" : "New photo - saved when you update"}
+                                </span>
+                                <label className="cursor-pointer text-xs font-medium text-orange-600 underline">
+                                  Replace photo
+                                  <input
+                                    type="file"
+                                    className="hidden"
+                                    accept="image/jpeg,image/jpg,image/png"
+                                    onChange={(e) => handleFileChange(e, "panCard", setPanCardPreview)}
+                                  />
+                                </label>
+                              </div>
                             </div>
                           ) : (
                             <label className="flex h-32 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 hover:bg-gray-100">
@@ -1329,7 +1323,7 @@ export default function EditWorkerPage() {
                                   Click to upload PAN card
                                 </p>
                                 <p className="text-xs text-gray-400">
-                                  JPG, PNG (MAX. 5MB)
+                                  JPG, PNG (MAX. 10MB)
                                 </p>
                               </div>
                               <input

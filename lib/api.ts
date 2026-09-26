@@ -139,10 +139,14 @@ export async function addWorker(payload: AddWorkerPayload): Promise<WorkerRespon
     
     if (!response.ok) {
       const error = await response.json().catch(() => ({ detail: 'Unknown error occurred' }));
-      const errorMessage = error.detail || 'Failed to add worker';
-      
+      // The API gateway answers with { message } rather than FastAPI's { detail },
+      // so reading only "detail" hid its errors behind a generic message.
+      const errorMessage = error.detail || error.message || 'Failed to add worker';
+
       // Throw with specific error messages
-      if (response.status === 400) {
+      if (response.status === 413) {
+        throw new Error('The photos are too large to upload together. Please use smaller images.');
+      } else if (response.status === 400) {
         throw new Error(errorMessage);
       } else if (response.status === 403) {
         throw new Error('Permission denied. Check AWS credentials.');
@@ -274,8 +278,11 @@ export async function updateWorker(workerId: number, payload: Partial<AddWorkerP
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Failed to update worker');
+      const error = await response.json().catch(() => ({}));
+      if (response.status === 413) {
+        throw new Error('The photos are too large to upload together. Please use smaller images.');
+      }
+      throw new Error(error.detail || error.message || 'Failed to update worker');
     }
 
     return await response.json();

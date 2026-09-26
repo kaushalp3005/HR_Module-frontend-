@@ -10,7 +10,9 @@ import { useAppStore } from "@/lib/store"
 import { addWorker, getNextEmpId } from "@/lib/api"
 import { workerContractorId, workerContractorName } from "@/lib/contractors"
 import { formatMedical, MEDICAL_NOT_DONE } from "@/lib/medical"
+import { MAX_LENGTH } from "@/lib/worker-form"
 import { toast } from "sonner"
+import { shrinkImage, formatBytes, MAX_UPLOAD_BYTES, MAX_SENT_BYTES } from "@/lib/image"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -209,16 +211,16 @@ export default function AddWorkerPage() {
     fetchNextEmpId()
   }, [user?.contractorId, form])
 
-  const handleFileChange = (
+  const handleFileChange = async (
     e: React.ChangeEvent<HTMLInputElement>,
     fieldName: "passportPhoto" | "aadharCard" | "panCard",
     setPreview: (url: string | null) => void
   ) => {
-    const file = e.target.files?.[0]
-    if (file) {
+    const original = e.target.files?.[0]
+    if (original) {
       // Validate image format
       const validFormats = ["image/jpeg", "image/jpg", "image/png"]
-      if (!validFormats.includes(file.type)) {
+      if (!validFormats.includes(original.type)) {
         toast.error("Invalid File Format", {
           description: "Please upload only JPG, JPEG, or PNG image formats."
         })
@@ -226,10 +228,21 @@ export default function AddWorkerPage() {
         return
       }
 
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
+      if (original.size > MAX_UPLOAD_BYTES) {
         toast.error("File Too Large", {
-          description: "File size should not exceed 5MB. Please compress the image."
+          description: `Photos may be up to ${formatBytes(MAX_UPLOAD_BYTES)}. This one is ${formatBytes(original.size)}.`
+        })
+        e.target.value = ""
+        return
+      }
+
+      // Phone photos are far bigger than an ID document needs, and three of them
+      // together are rejected by the API gateway, so shrink before uploading.
+      const file = await shrinkImage(original)
+
+      if (file.size > MAX_SENT_BYTES) {
+        toast.error("Could Not Compress Image", {
+          description: "This image could not be made small enough to upload. Please use a smaller photo."
         })
         e.target.value = ""
         return
@@ -241,9 +254,11 @@ export default function AddWorkerPage() {
         setPreview(reader.result as string)
       }
       reader.readAsDataURL(file)
-      
+
       toast.success("File Uploaded", {
-        description: `${file.name} has been uploaded successfully.`
+        description: file.size < original.size
+          ? `${original.name} added (compressed ${formatBytes(original.size)} to ${formatBytes(file.size)}).`
+          : `${original.name} has been uploaded successfully.`
       })
     }
   }
@@ -504,7 +519,7 @@ export default function AddWorkerPage() {
                     <FormItem className="md:col-span-2">
                       <FormLabel>Name of the Worker</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter full name" {...field} />
+                        <Input maxLength={MAX_LENGTH.workerName} placeholder="Enter full name" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -595,7 +610,7 @@ export default function AddWorkerPage() {
                       <FormItem className="md:col-span-1">
                         <FormLabel>Please specify designation</FormLabel>
                         <FormControl>
-                          <Input
+                          <Input maxLength={MAX_LENGTH.designationOther}
                             placeholder="Enter designation"
                             {...field}
                           />
@@ -642,7 +657,7 @@ export default function AddWorkerPage() {
                       <FormItem className="md:col-span-1">
                         <FormLabel>Specify Department</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter department name" {...field} />
+                          <Input maxLength={MAX_LENGTH.departmentOther} placeholder="Enter department name" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -686,7 +701,7 @@ export default function AddWorkerPage() {
                       <FormItem className="md:col-span-1">
                         <FormLabel>Specify Work Location</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter work location" {...field} />
+                          <Input maxLength={MAX_LENGTH.workLocationOther} placeholder="Enter work location" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -730,7 +745,7 @@ export default function AddWorkerPage() {
                       <FormItem className="md:col-span-1">
                         <FormLabel>Specify Floor</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter floor name" {...field} />
+                          <Input maxLength={MAX_LENGTH.floorOther} placeholder="Enter floor name" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -751,7 +766,7 @@ export default function AddWorkerPage() {
                     <FormItem className="md:col-span-1">
                       <FormLabel>Contact Number <span className="text-red-500">*</span></FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter primary contact number" type="tel" {...field} />
+                        <Input maxLength={MAX_LENGTH.contactNumber} placeholder="Enter primary contact number" type="tel" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -765,7 +780,7 @@ export default function AddWorkerPage() {
                     <FormItem className="md:col-span-1">
                       <FormLabel>Email (Optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter email address" type="email" {...field} />
+                        <Input maxLength={MAX_LENGTH.email} placeholder="Enter email address" type="email" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -779,7 +794,7 @@ export default function AddWorkerPage() {
                     <FormItem className="md:col-span-1">
                       <FormLabel>Emergency Contact Number <span className="text-red-500">*</span></FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter emergency contact number" type="tel" {...field} />
+                        <Input maxLength={MAX_LENGTH.emergencyContactNumber} placeholder="Enter emergency contact number" type="tel" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -793,7 +808,7 @@ export default function AddWorkerPage() {
                     <FormItem className="md:col-span-1">
                       <FormLabel>Emergency Person Name (Optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter emergency person name" {...field} />
+                        <Input maxLength={MAX_LENGTH.emrcyPNm} placeholder="Enter emergency person name" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -807,7 +822,7 @@ export default function AddWorkerPage() {
                     <FormItem className="md:col-span-1">
                       <FormLabel>Relationship (Optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Father, Spouse, Brother" {...field} />
+                        <Input maxLength={MAX_LENGTH.resp} placeholder="e.g., Father, Spouse, Brother" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -821,7 +836,7 @@ export default function AddWorkerPage() {
                     <FormItem className="md:col-span-1">
                       <FormLabel>Additional Emergency Contact (Optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter additional contact" type="tel" {...field} />
+                        <Input maxLength={MAX_LENGTH.emrcyConNo} placeholder="Enter additional contact" type="tel" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -855,7 +870,7 @@ export default function AddWorkerPage() {
                     <FormItem className="md:col-span-1">
                       <FormLabel>UAN Number <span className="text-red-500">*</span></FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter UAN number" {...field} />
+                        <Input maxLength={MAX_LENGTH.uanNumber} placeholder="Enter UAN number" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -869,7 +884,7 @@ export default function AddWorkerPage() {
                     <FormItem className="md:col-span-1">
                       <FormLabel>ESI Number <span className="text-red-500">*</span></FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter ESI number" {...field} />
+                        <Input maxLength={MAX_LENGTH.esiNumber} placeholder="Enter ESI number" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -995,7 +1010,7 @@ export default function AddWorkerPage() {
                     <FormItem className="md:col-span-1">
                       <FormLabel>PIN Code (Optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter PIN code" {...field} />
+                        <Input maxLength={MAX_LENGTH.pinCode} placeholder="Enter PIN code" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1015,7 +1030,7 @@ export default function AddWorkerPage() {
                     <FormItem className="md:col-span-1">
                       <FormLabel>Bank Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter bank name" {...field} />
+                        <Input maxLength={MAX_LENGTH.bankName} placeholder="Enter bank name" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1029,7 +1044,7 @@ export default function AddWorkerPage() {
                     <FormItem className="md:col-span-1">
                       <FormLabel>Bank Account Number</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter account number" {...field} />
+                        <Input maxLength={MAX_LENGTH.bankAc} placeholder="Enter account number" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1043,7 +1058,7 @@ export default function AddWorkerPage() {
                     <FormItem className="md:col-span-1">
                       <FormLabel>IFSC Code</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter IFSC code" {...field} />
+                        <Input maxLength={MAX_LENGTH.ifscCode} placeholder="Enter IFSC code" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1063,7 +1078,7 @@ export default function AddWorkerPage() {
                     <FormItem className="md:col-span-1">
                       <FormLabel>Apron Size</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., S, M, L, XL" {...field} />
+                        <Input maxLength={MAX_LENGTH.aprnSize} placeholder="e.g., S, M, L, XL" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1077,7 +1092,7 @@ export default function AddWorkerPage() {
                     <FormItem className="md:col-span-1">
                       <FormLabel>Apron Locker No.</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., 101" {...field} />
+                        <Input maxLength={MAX_LENGTH.apronLockerNo} placeholder="e.g., 101" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1091,7 +1106,7 @@ export default function AddWorkerPage() {
                     <FormItem className="md:col-span-1">
                       <FormLabel>Footwear Size</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., 7, 8, 9" {...field} />
+                        <Input maxLength={MAX_LENGTH.ftwrSize} placeholder="e.g., 7, 8, 9" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1149,7 +1164,7 @@ export default function AddWorkerPage() {
                     <FormItem className="md:col-span-1">
                       <FormLabel>Remarks</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter any remarks" {...field} />
+                        <Input maxLength={MAX_LENGTH.remark} placeholder="Enter any remarks" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1178,7 +1193,7 @@ export default function AddWorkerPage() {
                               <div className="flex flex-col items-center justify-center pt-5 pb-6">
                                 <Upload className="w-10 h-10 text-stone-400 mb-3" />
                                 <p className="text-sm text-stone-600 font-medium">Click to upload</p>
-                                <p className="text-xs text-stone-400 mt-1">JPG, JPEG, PNG (MAX. 5MB)</p>
+                                <p className="text-xs text-stone-400 mt-1">JPG, JPEG, PNG (MAX. 10MB)</p>
                               </div>
                               <input
                                 type="file"
@@ -1224,7 +1239,7 @@ export default function AddWorkerPage() {
                               <div className="flex flex-col items-center justify-center pt-5 pb-6">
                                 <Upload className="w-10 h-10 text-stone-400 mb-3" />
                                 <p className="text-sm text-stone-600 font-medium">Click to upload</p>
-                                <p className="text-xs text-stone-400 mt-1">JPG, JPEG, PNG (MAX. 5MB)</p>
+                                <p className="text-xs text-stone-400 mt-1">JPG, JPEG, PNG (MAX. 10MB)</p>
                               </div>
                               <input
                                 type="file"
@@ -1270,7 +1285,7 @@ export default function AddWorkerPage() {
                               <div className="flex flex-col items-center justify-center pt-5 pb-6">
                                 <Upload className="w-10 h-10 text-stone-400 mb-3" />
                                 <p className="text-sm text-stone-600 font-medium">Click to upload</p>
-                                <p className="text-xs text-stone-400 mt-1">JPG, JPEG, PNG (MAX. 5MB)</p>
+                                <p className="text-xs text-stone-400 mt-1">JPG, JPEG, PNG (MAX. 10MB)</p>
                               </div>
                               <input
                                 type="file"

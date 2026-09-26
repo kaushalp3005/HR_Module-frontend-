@@ -75,6 +75,8 @@ interface FieldDef {
   label: string
   /** "datetime" values are timestamps; "mono" renders in a fixed-width font (IDs, account numbers). */
   kind?: "datetime" | "mono"
+  /** Column shown when `key` is empty - for values the HR sheet import stored under another column. */
+  fallback?: keyof WorkerRecord
 }
 
 interface SectionDef {
@@ -105,7 +107,9 @@ export const WORKER_SECTIONS: SectionDef[] = [
     key: "emergency",
     title: "Emergency Contact",
     fields: [
-      { key: "emergency_contact_number", label: "Emergency Contact Number" },
+      // The HR sheet import put each worker's emergency number in emrcy_con_no
+      // (beside emrcy_p_nm / resp) and left emergency_contact_number empty.
+      { key: "emergency_contact_number", label: "Emergency Contact Number", fallback: "emrcy_con_no" },
       { key: "emrcy_p_nm", label: "Emergency Person Name" },
       { key: "resp", label: "Relationship" },
       { key: "emrcy_con_no", label: "Alternate Emergency Number" },
@@ -186,10 +190,12 @@ export const WORKER_SECTIONS: SectionDef[] = [
   },
 ]
 
+function toText(raw: unknown): string {
+  return raw === null || raw === undefined ? "" : String(raw).trim()
+}
+
 function formatValue(worker: WorkerRecord, field: FieldDef): string {
-  const raw = worker[field.key]
-  if (raw === null || raw === undefined) return ""
-  const text = String(raw).trim()
+  const text = toText(worker[field.key]) || (field.fallback ? toText(worker[field.fallback]) : "")
   if (!text) return ""
   if (field.kind === "datetime") {
     const parsed = new Date(text)
